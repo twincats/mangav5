@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useQuasar } from 'quasar'
 
 defineProps<{ msg: string }>()
+const $q = useQuasar()
+$q.dark.set(true)
 
+const hex = ref('#FF00FF')
 const count = ref(0)
+const lorem = ref('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod\n' +
+  '        tempor incididunt ut labore et dolore magna aliqua.')
 </script>
 
 <template>
@@ -15,6 +21,17 @@ const count = ref(0)
       Edit
       <code>components/HelloWorld.vue</code> to test HMR
     </p>
+  </div>
+  <div>
+    <q-color v-model="hex" class="my-picker" />
+  </div>
+
+  <div>
+    <q-card class="my-card">
+      <q-card-section>
+        {{ lorem }}
+      </q-card-section>
+    </q-card>
   </div>
 
   <p>
