@@ -13,7 +13,7 @@
 <!--        <q-btn dense flat icon="crop_square" />-->
 <!--        <q-btn dense flat icon="close" />-->
 <!--      </q-bar>-->
-      <q-toolbar class="bg-black text-white">
+      <q-toolbar class="bg-black text-white" style="height: 30px;app-region: drag;">
         <q-btn flat round dense icon="home" to="/"/>
         <q-btn flat round dense icon="book" @click="alert"/>
         <q-btn flat round dense icon="download" />

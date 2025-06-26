@@ -7,11 +7,16 @@ import {hardwareAccelerationMode} from './modules/HardwareAccelerationModule.js'
 import {autoUpdater} from './modules/AutoUpdater.js';
 import {allowInternalOrigins} from './modules/BlockNotAllowdOrigins.js';
 import {allowExternalUrls} from './modules/ExternalUrls.js';
+import {registerIpcProcess} from './modules/DataModule.js';
+import { app } from 'electron';
+import pie from "puppeteer-in-electron";
 
 
 export async function initApp(initConfig: AppInitConfig) {
+  await pie.initialize(app);
   const moduleRunner = createModuleRunner()
     .init(createWindowManagerModule({initConfig, openDevTools: import.meta.env.DEV}))
+    .init(registerIpcProcess())
     .init(disallowMultipleAppInstance())
     .init(terminateAppOnLastWindowClose())
     .init(hardwareAccelerationMode({enable: false}))
