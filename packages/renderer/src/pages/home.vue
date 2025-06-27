@@ -11,7 +11,7 @@ const generateImages = async() => {
 }
 
 const title = ref('empty')
-title.value = JSON.stringify(sessionStorage.getItem('title'))??''
+title.value = sessionStorage.getItem('title')?JSON.stringify(sessionStorage.getItem('title')):''
 const urlChapter = ref('')
 const scrapLoading = ref(false)
 const scrapTitle = async()=>{
@@ -22,6 +22,15 @@ const scrapTitle = async()=>{
     scrapLoading.value = false
   }
 
+}
+
+const scrapChapter = async()=>{
+  if(urlChapter.value!=''){
+    scrapLoading.value = true
+    title.value = await send('scraper:chapter',urlChapter.value)
+    sessionStorage.setItem('title',title.value)
+    scrapLoading.value = false
+  }
 }
 
 const copyImageUrls = async()=>{
@@ -58,6 +67,11 @@ const pasteUrls = async()=>{
         </template>
       </q-input>
       <q-btn class="bg-primary q-my-md" :loading="scrapLoading" @click="scrapTitle" label="Scrap">
+        <template v-slot:loading>
+          <q-spinner-facebook />
+        </template>
+      </q-btn>
+      <q-btn class="bg-primary q-my-md q-mx-md" :loading="scrapLoading" @click="scrapChapter" label="Scrap Chapter">
         <template v-slot:loading>
           <q-spinner-facebook />
         </template>
