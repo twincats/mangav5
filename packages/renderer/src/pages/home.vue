@@ -1,50 +1,60 @@
 <script setup lang="ts">
-import {ref} from 'vue';
-import {send,getClipboard} from '@app/preload';
+import { ref, onMounted } from "vue";
+import { send, getClipboard, mangaAPI } from "@app/preload";
 
 const clipboard = getClipboard();
 
-const text = ref('Hello World!');
-const images = ref('')
-const generateImages = async() => {
-  images.value = await send('generate-blue','blue solid')
-}
+const text = ref("Hello World!");
+const images = ref("");
+const generateImages = async () => {
+  images.value = await send("generate-blue", "blue solid");
+};
 
-const title = ref('empty')
-title.value = sessionStorage.getItem('title')?JSON.stringify(sessionStorage.getItem('title')):''
-const urlChapter = ref('')
-const scrapLoading = ref(false)
-const scrapTitle = async()=>{
-  if(urlChapter.value!=''){
-    scrapLoading.value = true
-    title.value = await send('scraper:title',urlChapter.value)
-    sessionStorage.setItem('title',title.value)
-    scrapLoading.value = false
+const title = ref("empty");
+title.value = sessionStorage.getItem("title")
+  ? JSON.stringify(sessionStorage.getItem("title"))
+  : "";
+const urlChapter = ref("");
+const scrapLoading = ref(false);
+const scrapTitle = async () => {
+  if (urlChapter.value != "") {
+    scrapLoading.value = true;
+    title.value = await send("scraper:title", urlChapter.value);
+    sessionStorage.setItem("title", title.value);
+    scrapLoading.value = false;
   }
+};
 
-}
-
-const scrapChapter = async()=>{
-  if(urlChapter.value!=''){
-    scrapLoading.value = true
-    title.value = await send('scraper:chapter',urlChapter.value)
-    sessionStorage.setItem('title',title.value)
-    scrapLoading.value = false
+const scrapChapter = async () => {
+  if (urlChapter.value != "") {
+    scrapLoading.value = true;
+    title.value = await send("scraper:chapter", urlChapter.value);
+    sessionStorage.setItem("title", title.value);
+    scrapLoading.value = false;
   }
-}
+};
 
-const copyImageUrls = async()=>{
-  clipboard.copy(JSON.stringify(title.value))
-}
+const copyImageUrls = async () => {
+  clipboard.copy(JSON.stringify(title.value));
+};
 
-const pasteUrls = async()=>{
-  urlChapter.value = clipboard.paste()
-}
+const pasteUrls = async () => {
+  urlChapter.value = clipboard.paste();
+};
+
+const isDbExist = ref(false);
+onMounted(async () => {
+  isDbExist.value = await mangaAPI.checkDatabaseExist();
+});
 </script>
 
 <template>
   <div class="q-px-md">
     <div>Home pages</div>
+    <div>
+      STATUS DB : <span v-if="isDbExist" style="color: green">YES</span
+      ><span v-else style="color: red">NO</span>
+    </div>
     <div>
       <q-input v-model="text" label="Nama" />
       <q-btn class="bg-primary q-my-md" @click="generateImages">Submit</q-btn>
@@ -57,7 +67,7 @@ const pasteUrls = async()=>{
       </q-input>
     </div>
     <div v-if="images">
-      <img :src="images" alt="images solid blue"/>
+      <img :src="images" alt="images solid blue" />
     </div>
     <div class="q-my-md">
       <div class="text-h6">WestManga Chapter URL</div>
@@ -66,12 +76,22 @@ const pasteUrls = async()=>{
           <q-btn round dense flat icon="content_paste" @click="pasteUrls" />
         </template>
       </q-input>
-      <q-btn class="bg-primary q-my-md" :loading="scrapLoading" @click="scrapTitle" label="Scrap">
+      <q-btn
+        class="bg-primary q-my-md"
+        :loading="scrapLoading"
+        @click="scrapTitle"
+        label="Scrap"
+      >
         <template v-slot:loading>
           <q-spinner-facebook />
         </template>
       </q-btn>
-      <q-btn class="bg-primary q-my-md q-mx-md" :loading="scrapLoading" @click="scrapChapter" label="Scrap Chapter">
+      <q-btn
+        class="bg-primary q-my-md q-mx-md"
+        :loading="scrapLoading"
+        @click="scrapChapter"
+        label="Scrap Chapter"
+      >
         <template v-slot:loading>
           <q-spinner-facebook />
         </template>
@@ -89,9 +109,10 @@ const pasteUrls = async()=>{
         </q-card>
       </div>
     </div>
+    <div>
+      <img src="manga://isekai/1/1.webp" alt="image" />
+    </div>
   </div>
 </template>
 
-<style scoped>
-
-</style>
+<style scoped></style>
