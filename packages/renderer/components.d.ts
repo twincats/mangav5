@@ -12,5 +12,6 @@ declare module 'vue' {
     MangaExample: typeof import('./src/components/MangaExample.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SetupDatabase: typeof import('./src/components/SetupDatabase.vue')['default']
   }
 }

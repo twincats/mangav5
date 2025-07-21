@@ -17,6 +17,11 @@ const router = createRouter({
       component: () => import("../pages/about.vue"),
     },
     {
+      path: "/feature",
+      name: "feature",
+      component: () => import("../pages/feature.vue"),
+    },
+    {
       path: "/manga-example",
       name: "manga-example",
       component: () => import("../components/MangaExample.vue"),

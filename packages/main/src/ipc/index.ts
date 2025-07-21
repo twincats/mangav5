@@ -1,19 +1,21 @@
 import { ipcMain } from "electron";
 import { IpcHandler } from "./types.js";
-import { fileHandlers } from "./handlers/fileHandlers.js"; 
-import { imageHandlers } from "./handlers/imageHanlers.js"; 
-import { scraperHandlers } from "./manga/scraper.js"; 
+import { fileHandlers } from "./handlers/fileHandlers.js";
+import { imageHandlers } from "./handlers/imageHanlers.js";
+import { scraperHandlers } from "./manga/scraper.js";
 import { mangaDatabaseHandlers } from "./manga/database.js";
 import { chapterImageHandlers } from "./manga/chapterImage.js";
-// Import other handler modules 
+import { dialogHandlers } from "./handlers/dialogHandlers.js";
+// Import other handler modules
 
-const modules = [ 
-  fileHandlers, 
-  imageHandlers, 
-  scraperHandlers, 
+const modules = [
+  fileHandlers,
+  imageHandlers,
+  scraperHandlers,
   mangaDatabaseHandlers,
   chapterImageHandlers,
-  // Add other modules 
+  dialogHandlers,
+  // Add other modules
 ];
 
 export function registerIpcHandlers() {
@@ -26,6 +28,6 @@ export function registerIpcHandlers() {
   for (const { name, handler } of handlers) {
     ipcMain.handle(name, handler);
   }
-  
-  console.log(`Registered ${handlers.length} IPC handlers`)
+
+  console.log(`Registered ${handlers.length} IPC handlers`);
 }
