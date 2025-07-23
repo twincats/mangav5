@@ -1,6 +1,6 @@
 /**
  * Manga Protocol Service
- * 
+ *
  * This service implements a custom Electron protocol handler for manga content,
  * allowing the application to access manga images from both directories and ZIP/CBZ archives
  * using a unified manga:// protocol.
@@ -12,6 +12,7 @@ import fs from "fs";
 import mime from "mime";
 import StreamZip from "node-stream-zip";
 import { app } from "electron";
+import yazl from "yazl";
 
 /** Base directory where all manga content is stored */
 const baseMangaDir = "D:/Tools/Manga";
@@ -46,7 +47,7 @@ class ZipCache {
 
   /**
    * Retrieves a ZIP handler from the cache or creates a new one
-   * 
+   *
    * @param zipPath - Path to the ZIP file
    * @returns Promise resolving to the ZIP handler
    */
@@ -73,7 +74,7 @@ class ZipCache {
 
   /**
    * Checks if a ZIP file is already in the cache
-   * 
+   *
    * @param zipPath - Path to the ZIP file
    * @returns True if the ZIP file is in the cache, false otherwise
    */
@@ -103,7 +104,7 @@ class ZipCache {
 
   /**
    * Removes a ZIP file from the cache and closes the handler
-   * 
+   *
    * @param zipPath - Path to the ZIP file to remove
    */
   private remove(zipPath: string) {
@@ -142,7 +143,7 @@ class ZipCache {
 
   /**
    * Gets the current number of ZIP files in the cache
-   * 
+   *
    * @returns The number of cached ZIP files
    */
   get size(): number {
@@ -155,7 +156,7 @@ const zipCache = new ZipCache();
 
 /**
  * Determines if a file is an image based on its extension
- * 
+ *
  * @param filename - The filename to check
  * @returns True if the file has a supported image extension, false otherwise
  */
@@ -167,7 +168,7 @@ function isImage(filename: string): boolean {
 
 /**
  * Retrieves a ZIP handler for the specified path, using the cache when possible
- * 
+ *
  * @param zipPath - The path to the ZIP file
  * @returns A Promise resolving to the StreamZipAsync instance
  * @throws If the ZIP file cannot be opened or accessed
@@ -183,7 +184,7 @@ async function getZip(zipPath: string): Promise<StreamZip.StreamZipAsync> {
 
 /**
  * Registers the custom manga:// protocol handler with Electron
- * 
+ *
  * The protocol format is: manga://manga-title/chapter-path/image-name
  * - hostname: manga title (folder name in baseMangaDir)
  * - pathname: chapter path and image name
@@ -247,7 +248,7 @@ export function registerMangaProtocol() {
 
 /**
  * Retrieves a list of image files for a specific manga chapter
- * 
+ *
  * @param chapterPath - The relative path to the chapter (e.g., "OnePiece/Chapter-1")
  * @returns A Promise resolving to an array of image paths, or empty array if no images found
  */
@@ -294,4 +295,79 @@ export function getZipCacheStats() {
   return {
     size: zipCache.size,
   };
+}
+
+/**
+ * Compresses a directory of manga chapter images into a CBZ archive
+ * and removes the original directory after successful compression
+ *
+ * @param chapterPath - The relative path to the chapter (e.g., "OnePiece/Chapter-1")
+ * @returns A Promise resolving to true if compression was successful, false otherwise
+ */
+export async function compressChapterDirectory(
+  chapterPath: string
+): Promise<boolean> {
+  try {
+    const fullDirPath = path.join(baseMangaDir, chapterPath);
+
+    // Check if the directory exists
+    if (
+      !fs.existsSync(fullDirPath) ||
+      !fs.statSync(fullDirPath).isDirectory()
+    ) {
+      console.error(`Directory does not exist: ${fullDirPath}`);
+      return false;
+    }
+
+    // Get the chapter name from the path
+    const chapterName = path.basename(fullDirPath);
+    const parentDir = path.dirname(fullDirPath);
+    const archivePath = path.join(parentDir, `${chapterName}.cbz`);
+
+    // Create a new ZIP file
+    const zipFile = new yazl.ZipFile();
+
+    // Get all image files in the directory
+    const files = await fs.promises.readdir(fullDirPath);
+    const imageFiles = files.filter(isImage);
+
+    if (imageFiles.length === 0) {
+      console.error(`No image files found in directory: ${fullDirPath}`);
+      return false;
+    }
+
+    // Add each image to the ZIP file
+    for (const file of imageFiles) {
+      const filePath = path.join(fullDirPath, file);
+      zipFile.addFile(filePath, file);
+    }
+
+    // Finalize the ZIP file
+    zipFile.end();
+
+    // Create a write stream to save the ZIP file
+    const outputStream = fs.createWriteStream(archivePath);
+
+    // Wait for the ZIP file to be written
+    await new Promise<void>((resolve, reject) => {
+      zipFile.outputStream.pipe(outputStream);
+      outputStream.on("close", resolve);
+      outputStream.on("error", reject);
+    });
+
+    console.log(`Successfully created archive: ${archivePath}`);
+
+    // Remove the original directory and its contents
+    for (const file of files) {
+      await fs.promises.unlink(path.join(fullDirPath, file));
+    }
+    await fs.promises.rmdir(fullDirPath);
+
+    console.log(`Successfully removed directory: ${fullDirPath}`);
+
+    return true;
+  } catch (err) {
+    console.error(`Error compressing chapter directory: ${chapterPath}`, err);
+    return false;
+  }
 }
