@@ -9,6 +9,7 @@ import {allowInternalOrigins} from './modules/BlockNotAllowdOrigins.js';
 import {allowExternalUrls} from './modules/ExternalUrls.js';
 import {registerIpcProcess} from './modules/DataModule.js';
 import {registerMangaProtocolModule} from './modules/MangaProtocolModule.js';
+import {createDownloadServiceModule} from './modules/DownloadServiceModule.js';
 import { app } from 'electron';
 import pie from "puppeteer-in-electron";
 
@@ -19,6 +20,7 @@ export async function initApp(initConfig: AppInitConfig) {
     .init(createWindowManagerModule({initConfig, openDevTools: import.meta.env.DEV}))
     .init(registerIpcProcess())
     .init(registerMangaProtocolModule())
+    .init(createDownloadServiceModule())
     .init(disallowMultipleAppInstance())
     .init(terminateAppOnLastWindowClose())
     .init(hardwareAccelerationMode({enable: false}))

@@ -6,6 +6,7 @@ import { scraperHandlers } from "./manga/scraper.js";
 import { mangaDatabaseHandlers } from "./manga/database.js";
 import { chapterImageHandlers } from "./manga/chapterImage.js";
 import { dialogHandlers } from "./handlers/dialogHandlers.js";
+import { downloadHandlers } from "./handlers/downloadHandlers.js";
 // Import other handler modules
 
 const modules = [
@@ -15,6 +16,7 @@ const modules = [
   mangaDatabaseHandlers,
   chapterImageHandlers,
   dialogHandlers,
+  downloadHandlers,
   // Add other modules
 ];
 

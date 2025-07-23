@@ -3,6 +3,8 @@
  * commonly used in the renderer process.
  */
 
+import type { DownloadAPI } from "@app/main/src/types/downloadTypes.js";
+
 export interface ConfigData {
   key: string;
   value: string;
@@ -110,5 +112,10 @@ declare global {
      * Manga database API
      */
     mangaAPI: MangaAPI;
+
+    /**
+     * Download API for batch downloads with progress tracking
+     */
+    downloadAPI: DownloadAPI;
   }
 }
