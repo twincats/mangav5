@@ -9,8 +9,7 @@ import {
   BatchMangaData,
   BatchInsertResult,
 } from "../../schema/mangaRepository.js";
-import { runMigrations } from "../../schema/migrations.js";
-import { initializeDatabase as initSchemaDb } from "../../schema/index.js";
+import { DatabaseManager } from "../../schema/database.js";
 import { DirectoryScanner, DirectoryScanResult } from "../../services/directoryScanner.js";
 import { join } from "path";
 import fs from "node:fs";
@@ -23,8 +22,8 @@ const initializeDatabase = async () => {
   if (!dbInitialized) {
     try {
       // Initialize database connection and run migrations
-      const { db, sqlite } = initSchemaDb();
-      await runMigrations(sqlite);
+      const dbManager = DatabaseManager.getInstance();
+      await dbManager.initialize();
 
       // Create repository instance
       mangaRepository = new MangaRepository();
