@@ -5,7 +5,7 @@ import type {
   DownloadResponse,
   DownloadStatsResponse,
   DownloadAPI
-} from "@app/main/src/types/downloadTypes.js";
+} from "../../main/src/types/downloadTypes.js";
 
 /**
  * Download API for the renderer process
