@@ -64,6 +64,7 @@ export const mangaAPI = {
   updateManga: (id: number, mangaData: Partial<MangaData>) =>
     ipcRenderer.invoke("manga:update", id, mangaData),
   deleteManga: (id: number) => ipcRenderer.invoke("manga:delete", id),
+  getLatestManga:() => ipcRenderer.invoke("manga:latest"),
 
   // Alternative titles operations
   getAlternativeTitles: (mangaId: number) =>

@@ -324,6 +324,12 @@ const initDb = async (_event: IpcMainInvokeEvent) => {
   }
 };
 
+// Get latest manga with their latest chapters
+const getLatestManga = async (_event: IpcMainInvokeEvent) => {
+  const repo = await initializeDatabase();
+  return repo.getLatestManga();
+};
+
 // Then add it to the handlers list in the mangaDatabaseHandlers object
 export const mangaDatabaseHandlers: IpcModule = {
   getHandlers: () => [
@@ -337,6 +343,7 @@ export const mangaDatabaseHandlers: IpcModule = {
     { name: "manga:scanDirectoryAndImport", handler: scanDirectoryAndImport },
     { name: "manga:update", handler: updateManga },
     { name: "manga:delete", handler: deleteManga },
+    { name: "manga:latest", handler: getLatestManga },
 
     // Alternative titles handlers
     { name: "manga:getAlternativeTitles", handler: getAlternativeTitles },

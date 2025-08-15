@@ -6,7 +6,7 @@
           <q-btn flat round dense icon="home" to="/" />
           <q-btn flat round dense icon="book" @click="alert" />
           <q-btn flat round dense icon="download" to="/manga-example" />
-          <q-btn>ds</q-btn>
+          <q-btn to="/feature">ds</q-btn>
           <q-btn flat round dense icon="info" to="/about"></q-btn>
         </q-toolbar>
       </q-header>

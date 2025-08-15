@@ -1,6 +1,7 @@
 import { eq, like } from "drizzle-orm";
 import { schema } from "./database.js";
 import { BaseRepository } from "./repositories/BaseRepository.js";
+import { sql } from "drizzle-orm";
 
 // Types for our repository functions
 export interface ConfigData {
@@ -563,6 +564,35 @@ export class MangaRepository extends BaseRepository {
       console.error('Batch chapter insert failed:', error);
       return result;
     }
+  }
+
+  // Get latest manga with their latest chapters
+  async getLatestManga() {
+    this.logOperation('getLatestManga');
+    
+    return this.safeExecute(
+      () => this.db
+        .select({
+          manga_id: schema.manga.mangaId,
+          main_title: schema.manga.mainTitle,
+          status_name: schema.mangaStatus.statusName,
+          chapter_id: schema.chapters.chapterId,
+          chapter_number: schema.chapters.chapterNumber,
+          download_time: schema.chapters.createdAt
+        })
+        .from(schema.manga)
+        .innerJoin(schema.chapters, eq(schema.manga.mangaId, schema.chapters.mangaId))
+        .innerJoin(schema.mangaStatus, eq(schema.manga.statusId, schema.mangaStatus.statusId))
+        .where(
+          sql`${schema.chapters.chapterNumber} = (
+            SELECT MAX(CAST(c2.chapter_number AS decimal))
+            FROM ${schema.chapters} c2
+            WHERE c2.manga_id = ${schema.manga.mangaId}
+          )`
+        )
+        .orderBy(schema.chapters.createdAt, schema.manga.mainTitle),
+      'getLatestManga'
+    );
   }
 
   // Close the database connection (legacy method - not needed with DatabaseManager)
