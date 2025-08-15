@@ -29,6 +29,30 @@ export interface ScrapingRuleData {
   rulesJson: string;
 }
 
+// Batch insert interfaces
+export interface BatchMangaData {
+  mainTitle: string;
+  description?: string;
+  year?: number;
+  statusId?: number;
+  alternativeTitles?: string[];
+  chapters?: Omit<ChapterData, 'mangaId'>[];
+}
+
+export interface BatchInsertResult {
+  success: boolean;
+  insertedManga: number;
+  insertedChapters: number;
+  errors?: string[];
+}
+
+// Directory scan interfaces
+export interface DirectoryScanResult {
+  mangaList: BatchMangaData[];
+  totalManga: number;
+  totalChapters: number;
+}
+
 // Manga database API
 export const mangaAPI = {
   // Manga operations
@@ -86,4 +110,14 @@ export const mangaAPI = {
   setConfig: (configData: ConfigData) =>
     ipcRenderer.invoke("manga:setConfig", configData),
   deleteConfig: (key: string) => ipcRenderer.invoke("manga:deleteConfig", key),
+
+  // Batch insert operations
+  batchInsertManga: (mangaList: BatchMangaData[]) =>
+    ipcRenderer.invoke("manga:batchInsert", mangaList),
+  batchInsertChapters: (mangaId: number, chapters: Omit<ChapterData, 'mangaId'>[]) =>
+    ipcRenderer.invoke("manga:batchInsertChapters", mangaId, chapters),
+
+  // Directory scan operations
+  scanDirectoryAndImport: (directoryPath: string) =>
+    ipcRenderer.invoke("manga:scanDirectoryAndImport", directoryPath),
 };

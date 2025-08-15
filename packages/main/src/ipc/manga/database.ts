@@ -6,8 +6,12 @@ import {
   ChapterData,
   ScrapingRuleData,
   ConfigData,
+  BatchMangaData,
+  BatchInsertResult,
 } from "../../schema/mangaRepository.js";
 import { runMigrations } from "../../schema/migrations.js";
+import { initializeDatabase as initSchemaDb } from "../../schema/index.js";
+import { DirectoryScanner, DirectoryScanResult } from "../../services/directoryScanner.js";
 import { join } from "path";
 import fs from "node:fs";
 
@@ -18,8 +22,9 @@ let mangaRepository: MangaRepository;
 const initializeDatabase = async () => {
   if (!dbInitialized) {
     try {
-      // Run migrations to ensure database is set up
-      await runMigrations();
+      // Initialize database connection and run migrations
+      const { db, sqlite } = initSchemaDb();
+      await runMigrations(sqlite);
 
       // Create repository instance
       mangaRepository = new MangaRepository();
@@ -86,6 +91,65 @@ const createManga = async (
 ) => {
   const repo = await initializeDatabase();
   return repo.createManga(mangaData);
+};
+
+// Batch insert manga with chapters
+const batchInsertManga = async (
+  _event: IpcMainInvokeEvent,
+  mangaList: BatchMangaData[]
+): Promise<BatchInsertResult> => {
+  const repo = await initializeDatabase();
+  return repo.batchInsertManga(mangaList);
+};
+
+// Batch insert chapters for existing manga
+const batchInsertChapters = async (
+  _event: IpcMainInvokeEvent,
+  mangaId: number,
+  chapters: Omit<ChapterData, 'mangaId'>[]
+): Promise<BatchInsertResult> => {
+  const repo = await initializeDatabase();
+  return repo.batchInsertChapters(mangaId, chapters);
+};
+
+// Scan directory and auto-import manga
+const scanDirectoryAndImport = async (
+  _event: IpcMainInvokeEvent,
+  mangaDirectory: string
+): Promise<{ scanResult: DirectoryScanResult; importResult: BatchInsertResult }> => {
+  try {
+    // 1. Scan directory
+    const scanner = new DirectoryScanner(mangaDirectory);
+    const scanResult = await scanner.scanMangaDirectory();
+    
+    console.log(`Scanned ${scanResult.totalManga} manga with ${scanResult.totalChapters} chapters`);
+    
+    // 2. Save directory to config
+    const repo = await initializeDatabase();
+    await repo.setConfig({
+      key: "mangadirectory",
+      value: mangaDirectory,
+    });
+    
+    // 3. Auto-import manga jika ada
+    let importResult: BatchInsertResult = {
+      success: true,
+      insertedManga: 0,
+      insertedChapters: 0,
+      errors: []
+    };
+    
+    if (scanResult.mangaList.length > 0) {
+      importResult = await repo.batchInsertManga(scanResult.mangaList);
+      console.log(`Auto-imported ${importResult.insertedManga} manga with ${importResult.insertedChapters} chapters`);
+    }
+    
+    return { scanResult, importResult };
+    
+  } catch (error) {
+    console.error('Error scanning directory and importing:', error);
+    throw error;
+  }
 };
 
 const updateManga = async (
@@ -269,6 +333,9 @@ export const mangaDatabaseHandlers: IpcModule = {
     { name: "manga:getById", handler: getMangaById },
     { name: "manga:search", handler: searchMangaByTitle },
     { name: "manga:create", handler: createManga },
+    { name: "manga:batchInsert", handler: batchInsertManga },
+    { name: "manga:batchInsertChapters", handler: batchInsertChapters },
+    { name: "manga:scanDirectoryAndImport", handler: scanDirectoryAndImport },
     { name: "manga:update", handler: updateManga },
     { name: "manga:delete", handler: deleteManga },
 

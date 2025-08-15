@@ -29,6 +29,30 @@ interface Chapter {
   createdAt: string;
 }
 
+// Batch insert types
+interface BatchMangaData {
+  mainTitle: string;
+  description?: string;
+  year?: number;
+  statusId?: number;
+  alternativeTitles?: string[];
+  chapters?: {
+    chapterNumber: number;
+    chapterTitle?: string;
+    volume?: number;
+    translatorGroup?: string;
+    releaseTime?: string;
+    language?: string;
+  }[];
+}
+
+interface BatchInsertResult {
+  success: boolean;
+  insertedManga: number;
+  insertedChapters: number;
+  errors?: string[];
+}
+
 // State variables
 const mangaList = ref<Manga[]>([]);
 const statusList = ref<MangaStatus[]>([]);
@@ -47,6 +71,28 @@ const newManga = ref({
 });
 
 const newAltTitle = ref('');
+
+// Batch insert form data
+const batchMangaList = ref<BatchMangaData[]>([
+  {
+    mainTitle: '',
+    description: '',
+    year: undefined,
+    statusId: undefined,
+    alternativeTitles: [],
+    chapters: []
+  }
+]);
+
+const newBatchAltTitle = ref('');
+const newBatchChapter = ref({
+  chapterNumber: 1,
+  chapterTitle: '',
+  volume: undefined as number | undefined,
+  translatorGroup: '',
+  releaseTime: '',
+  language: ''
+});
 
 // Load manga list and statuses on component mount
 onMounted(async () => {
@@ -141,6 +187,115 @@ async function createManga() {
   } finally {
     loading.value = false;
   }
+}
+
+// Batch insert manga with chapters
+async function batchInsertManga() {
+  // Validate required fields
+  const validManga = batchMangaList.value.filter(manga => manga.mainTitle.trim());
+  if (validManga.length === 0) {
+    error.value = 'At least one manga with title is required';
+    return;
+  }
+  
+  try {
+    loading.value = true;
+    error.value = '';
+    
+    const result: BatchInsertResult = await window.mangaAPI.batchInsertManga(validManga);
+    
+    if (result.success) {
+      alert(`Batch insert completed!\nInserted: ${result.insertedManga} manga, ${result.insertedChapters} chapters`);
+      
+      // Reset batch form
+      batchMangaList.value = [{
+        mainTitle: '',
+        description: '',
+        year: undefined,
+        statusId: undefined,
+        alternativeTitles: [],
+        chapters: []
+      }];
+      
+      // Reload manga list
+      await loadMangaList();
+    } else {
+      error.value = `Batch insert failed: ${result.errors?.join(', ')}`;
+    }
+  } catch (err) {
+    console.error('Failed to batch insert manga:', err);
+    error.value = 'Failed to batch insert manga';
+  } finally {
+    loading.value = false;
+  }
+}
+
+// Add new manga to batch form
+function addBatchManga() {
+  batchMangaList.value.push({
+    mainTitle: '',
+    description: '',
+    year: undefined,
+    statusId: undefined,
+    alternativeTitles: [],
+    chapters: []
+  });
+}
+
+// Remove manga from batch form
+function removeBatchManga(index: number) {
+  if (batchMangaList.value.length > 1) {
+    batchMangaList.value.splice(index, 1);
+  }
+}
+
+// Add alternative title to batch manga
+function addBatchAltTitle(mangaIndex: number) {
+  if (newBatchAltTitle.value.trim()) {
+    if (!batchMangaList.value[mangaIndex].alternativeTitles) {
+      batchMangaList.value[mangaIndex].alternativeTitles = [];
+    }
+    batchMangaList.value[mangaIndex].alternativeTitles!.push(newBatchAltTitle.value.trim());
+    newBatchAltTitle.value = '';
+  }
+}
+
+// Remove alternative title from batch manga
+function removeBatchAltTitle(mangaIndex: number, titleIndex: number) {
+  batchMangaList.value[mangaIndex].alternativeTitles?.splice(titleIndex, 1);
+}
+
+// Add chapter to batch manga
+function addBatchChapter(mangaIndex: number) {
+  if (newBatchChapter.value.chapterNumber > 0) {
+    if (!batchMangaList.value[mangaIndex].chapters) {
+      batchMangaList.value[mangaIndex].chapters = [];
+    }
+    
+    batchMangaList.value[mangaIndex].chapters!.push({
+      chapterNumber: newBatchChapter.value.chapterNumber,
+      chapterTitle: newBatchChapter.value.chapterTitle || undefined,
+      volume: newBatchChapter.value.volume || undefined,
+      translatorGroup: newBatchChapter.value.translatorGroup || undefined,
+      releaseTime: newBatchChapter.value.releaseTime || undefined,
+      language: newBatchChapter.value.language || undefined,
+    });
+    
+    // Reset chapter form
+    newBatchChapter.value = {
+      chapterNumber: newBatchChapter.value.chapterNumber + 1,
+      chapterTitle: '',
+      volume: undefined,
+      translatorGroup: '',
+      releaseTime: '',
+      language: ''
+    };
+  }
+}
+
+// Remove chapter from batch manga
+function removeBatchChapter(mangaIndex: number, chapterIndex: number) {
+  batchMangaList.value[mangaIndex].chapters?.splice(chapterIndex, 1);
 }
 
 // Delete a manga
@@ -253,6 +408,168 @@ async function deleteManga(mangaId: number) {
         <button @click="createManga" type="button" class="create-btn">
           Create Manga
         </button>
+      </div>
+      
+      <!-- Batch Insert Manga Form -->
+      <div class="batch-insert-form">
+        <h2>Batch Insert Manga</h2>
+        
+        <div v-for="(manga, mangaIndex) in batchMangaList" :key="mangaIndex" class="batch-manga-item">
+          <div class="batch-manga-header">
+            <h3>Manga {{ mangaIndex + 1 }}</h3>
+            <button 
+              v-if="batchMangaList.length > 1" 
+              @click="removeBatchManga(mangaIndex)" 
+              type="button" 
+              class="remove-btn"
+              title="Remove manga"
+            >
+              ×
+            </button>
+          </div>
+          
+          <div class="form-group">
+            <label :for="'batchTitle' + mangaIndex">Main Title*</label>
+            <input 
+              :id="'batchTitle' + mangaIndex" 
+              v-model="manga.mainTitle" 
+              type="text" 
+              required
+            />
+          </div>
+          
+          <div class="form-group">
+            <label :for="'batchDesc' + mangaIndex">Description</label>
+            <textarea 
+              :id="'batchDesc' + mangaIndex" 
+              v-model="manga.description" 
+              rows="2"
+            ></textarea>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label :for="'batchYear' + mangaIndex">Year</label>
+              <input 
+                :id="'batchYear' + mangaIndex" 
+                v-model.number="manga.year" 
+                type="number" 
+                min="1900" 
+                max="2100"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label :for="'batchStatus' + mangaIndex">Status</label>
+              <select :id="'batchStatus' + mangaIndex" v-model="manga.statusId">
+                <option :value="undefined">Select status</option>
+                <option 
+                  v-for="status in statusList" 
+                  :key="status.statusId" 
+                  :value="status.statusId"
+                >
+                  {{ status.statusName }}
+                </option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Alternative Titles -->
+          <div class="form-group">
+            <label>Alternative Titles</label>
+            <div class="alt-title-input">
+              <input 
+                v-model="newBatchAltTitle" 
+                type="text" 
+                placeholder="Add alternative title"
+              />
+              <button @click="addBatchAltTitle(mangaIndex)" type="button">Add</button>
+            </div>
+            
+            <ul class="alt-titles-list" v-if="manga.alternativeTitles && manga.alternativeTitles.length > 0">
+              <li v-for="(title, titleIndex) in manga.alternativeTitles" :key="titleIndex">
+                {{ title }}
+                <button @click="removeBatchAltTitle(mangaIndex, titleIndex)" type="button" class="remove-btn">
+                  ×
+                </button>
+              </li>
+            </ul>
+          </div>
+          
+          <!-- Chapters -->
+          <div class="form-group">
+            <label>Chapters</label>
+            <div class="chapter-input">
+              <div class="chapter-input-row">
+                <input 
+                  v-model.number="newBatchChapter.chapterNumber" 
+                  type="number" 
+                  min="1" 
+                  placeholder="Chapter #"
+                  class="chapter-number-input"
+                />
+                <input 
+                  v-model="newBatchChapter.chapterTitle" 
+                  type="text" 
+                  placeholder="Chapter title"
+                  class="chapter-title-input"
+                />
+                <input 
+                  v-model.number="newBatchChapter.volume" 
+                  type="number" 
+                  min="1" 
+                  placeholder="Volume"
+                  class="volume-input"
+                />
+              </div>
+              <div class="chapter-input-row">
+                <input 
+                  v-model="newBatchChapter.translatorGroup" 
+                  type="text" 
+                  placeholder="Translator group"
+                  class="translator-input"
+                />
+                <input 
+                  v-model="newBatchChapter.releaseTime" 
+                  type="text" 
+                  placeholder="Release time"
+                  class="release-input"
+                />
+                <input 
+                  v-model="newBatchChapter.language" 
+                  type="text" 
+                  placeholder="Language"
+                  class="language-input"
+                />
+              </div>
+              <button @click="addBatchChapter(mangaIndex)" type="button">Add Chapter</button>
+            </div>
+            
+            <ul class="chapters-list" v-if="manga.chapters && manga.chapters.length > 0">
+              <li v-for="(chapter, chapterIndex) in manga.chapters" :key="chapterIndex">
+                <div class="chapter-number">{{ chapter.chapterNumber }}</div>
+                <div class="chapter-title">{{ chapter.chapterTitle || `Chapter ${chapter.chapterNumber}` }}</div>
+                <div class="chapter-info">
+                  <span v-if="chapter.volume">Vol. {{ chapter.volume }}</span>
+                  <span v-if="chapter.translatorGroup">{{ chapter.translatorGroup }}</span>
+                </div>
+                <button @click="removeBatchChapter(mangaIndex, chapterIndex)" type="button" class="remove-btn">
+                  ×
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="batch-actions">
+          <button @click="addBatchManga" type="button" class="add-manga-btn">
+            + Add Another Manga
+          </button>
+          
+          <button @click="batchInsertManga" type="button" class="batch-create-btn">
+            Create All Manga
+          </button>
+        </div>
       </div>
       
       <!-- Manga List -->
@@ -374,6 +691,15 @@ async function deleteManga(mangaId: number) {
   margin-bottom: 15px;
 }
 
+.form-row {
+  display: flex;
+  gap: 15px;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
 label {
   display: block;
   margin-bottom: 5px;
@@ -447,6 +773,108 @@ button:hover {
   margin-top: 10px;
 }
 
+.batch-insert-form {
+  grid-column: span 3; /* Span across all columns */
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.batch-manga-item {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 20px;
+  background-color: #fff;
+}
+
+.batch-manga-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.batch-manga-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.batch-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.add-manga-btn, .batch-create-btn {
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #2196f3;
+  color: white;
+}
+
+.add-manga-btn:hover, .batch-create-btn:hover {
+  background-color: #1976d2;
+}
+
+.chapter-input {
+  margin-top: 15px;
+  margin-bottom: 15px;
+}
+
+.chapter-input-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.chapter-number-input, .volume-input, .translator-input, .release-input, .language-input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.chapter-title-input {
+  flex: 2;
+}
+
+.chapters-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 10px;
+}
+
+.chapters-list li {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.chapters-list li:last-child {
+  border-bottom: none;
+}
+
+.chapter-number {
+  font-weight: bold;
+  margin-right: 10px;
+  min-width: 30px;
+}
+
+.chapter-title {
+  flex: 1;
+}
+
+.chapter-info {
+  color: #666;
+  font-size: 0.9em;
+}
+
 .manga-list ul {
   list-style: none;
   padding: 0;
@@ -498,33 +926,6 @@ button:hover {
 
 .manga-info {
   margin-bottom: 20px;
-}
-
-.chapters-list {
-  list-style: none;
-  padding: 0;
-}
-
-.chapters-list li {
-  display: flex;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #eee;
-}
-
-.chapter-number {
-  font-weight: bold;
-  margin-right: 10px;
-  min-width: 30px;
-}
-
-.chapter-title {
-  flex: 1;
-}
-
-.chapter-info {
-  color: #666;
-  font-size: 0.9em;
 }
 
 .empty-state {

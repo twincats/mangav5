@@ -33,12 +33,39 @@ export interface ScrapingRuleData {
   rulesJson: string;
 }
 
+// Batch insert interfaces
+export interface BatchMangaData {
+  mainTitle: string;
+  description?: string;
+  year?: number;
+  statusId?: number;
+  alternativeTitles?: string[];
+  chapters?: Omit<ChapterData, 'mangaId'>[];
+}
+
+export interface BatchInsertResult {
+  success: boolean;
+  insertedManga: number;
+  insertedChapters: number;
+  errors?: string[];
+}
+
+// Directory scan interfaces
+export interface DirectoryScanResult {
+  mangaList: BatchMangaData[];
+  totalManga: number;
+  totalChapters: number;
+}
+
 export interface MangaAPI {
   // Manga operations
   getAllManga: () => Promise<any[]>;
   getMangaById: (id: number) => Promise<any>;
   searchManga: (title: string) => Promise<any[]>;
   createManga: (mangaData: MangaData) => Promise<number>;
+  batchInsertManga: (mangaList: BatchMangaData[]) => Promise<BatchInsertResult>;
+  batchInsertChapters: (mangaId: number, chapters: Omit<ChapterData, 'mangaId'>[]) => Promise<BatchInsertResult>;
+  scanDirectoryAndImport: (directoryPath: string) => Promise<{ scanResult: DirectoryScanResult; importResult: BatchInsertResult }>;
   updateManga: (id: number, mangaData: Partial<MangaData>) => Promise<void>;
   deleteManga: (id: number) => Promise<void>;
 
@@ -72,6 +99,7 @@ export interface MangaAPI {
 
   // Database path and initialization
   getDatabasePath: () => Promise<string>;
+  checkDatabaseExist: () => Promise<boolean>;
   initDb: () => Promise<{success: boolean, message: string}>;
   
   // Config operations

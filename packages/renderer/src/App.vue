@@ -1,6 +1,6 @@
 <template>
   <div>
-    <q-layout v-if="!isDbExist" view="hHh LpR fFf" class="no-shadow">
+    <q-layout v-if="isDbExist" view="hHh LpR fFf" class="no-shadow">
       <q-header class="bg-primary text-white">
         <q-toolbar class="bg-black text-white" style="height: 30px">
           <q-btn flat round dense icon="home" to="/" />

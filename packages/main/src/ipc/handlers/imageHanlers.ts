@@ -1,7 +1,10 @@
 import { IpcHandler, IpcModule } from "../types.js";
 import sharp from "sharp";
-import fs from "fs/promises";
-import path from "path";
+import {
+  ImageService,
+  ImageConversionOptions,
+  ImageManipulationOptions,
+} from "../../services/imageService.js";
 
 const genBlue: IpcHandler = {
   name: "generate-blue",
@@ -30,38 +33,20 @@ const genBlue: IpcHandler = {
 const convertToWebp: IpcHandler = {
   name: "convert-to-webp",
   handler: async (_, imagePath: string) => {
-    try {
-      // Generate the output path with .webp extension
-      const parsedPath = path.parse(imagePath);
-      const webpPath = path.join(parsedPath.dir, parsedPath.name + ".webp");
+    const result = await ImageService.convertToWebP(imagePath, {
+      quality: 80,
+      deleteOriginal: true,
+    });
 
-      // Read the image file
-      const imageBuffer = await fs.readFile(imagePath);
-
-      // Convert to WebP format
-      await sharp(imageBuffer)
-        .webp({ quality: 80 }) // 80% quality for good balance between size and quality
-        .toFile(webpPath);
-
-      // Delete the original file
-      await fs.unlink(imagePath);
-
+    if (result.success) {
       console.log(
-        `Converted ${imagePath} to WebP format and saved to ${webpPath}`
+        `Converted ${imagePath} to WebP format and saved to ${result.outputPath}`
       );
-      return {
-        success: true,
-        message: `Image converted successfully to ${webpPath}`,
-      };
-    } catch (error) {
-      console.error(`Error converting image to WebP: ${error}`);
-      return {
-        success: false,
-        message: `Failed to convert image to WebP: ${
-          (error as Error).message ?? "Unknown error"
-        }`,
-      };
+    } else {
+      console.error(`Error converting image to WebP: ${result.message}`);
     }
+
+    return result;
   },
 };
 
@@ -73,42 +58,213 @@ const convertToWebp: IpcHandler = {
 const convertAndResizeToWebp: IpcHandler = {
   name: "convert-resize-to-webp",
   handler: async (_, imagePath: string) => {
-    try {
-      // Generate the output path with .webp extension
-      const parsedPath = path.parse(imagePath);
-      const webpPath = path.join(parsedPath.dir, parsedPath.name + ".webp");
+    const result = await ImageService.convertToWebP(imagePath, {
+      quality: 80,
+      resizeWidth: 1000,
+      deleteOriginal: true,
+    });
 
-      // Read the image file
-      const imageBuffer = await fs.readFile(imagePath);
-
-      // Convert to WebP format and resize to 1000px width
-      await sharp(imageBuffer)
-        .resize({ width: 1000, withoutEnlargement: true }) // Resize to 1000px width, maintain aspect ratio
-        .webp({ quality: 80 }) // 80% quality for good balance between size and quality
-        .toFile(webpPath);
-
-      // Delete the original file
-      await fs.unlink(imagePath);
-
+    if (result.success) {
       console.log(
-        `Converted and resized ${imagePath} to WebP format (1000px width) and saved to ${webpPath}`
+        `Converted and resized ${imagePath} to WebP format (1000px width) and saved to ${result.outputPath}`
       );
-      return {
-        success: true,
-        message: `Image converted and resized successfully to ${webpPath}`,
-      };
-    } catch (error) {
-      console.error(`Error converting and resizing image to WebP: ${error}`);
-      return {
-        success: false,
-        message: `Failed to convert and resize image to WebP: ${
-          (error as Error).message ?? "Unknown error"
-        }`,
-      };
+    } else {
+      console.error(
+        `Error converting and resizing image to WebP: ${result.message}`
+      );
     }
+
+    return result;
+  },
+};
+
+/**
+ * Advanced handler for WebP conversion with configurable parameters
+ * Accepts an object with imagePath and options
+ */
+const convertToWebpAdvanced: IpcHandler = {
+  name: "convert-to-webp-advanced",
+  handler: async (
+    _,
+    params: { imagePath: string; options?: ImageConversionOptions }
+  ) => {
+    const { imagePath, options = {} } = params;
+    const result = await ImageService.convertToWebP(imagePath, options);
+
+    if (result.success) {
+      console.log(
+        `Advanced WebP conversion: ${imagePath} -> ${result.outputPath}`
+      );
+    } else {
+      console.error(`Advanced WebP conversion failed: ${result.message}`);
+    }
+
+    return result;
+  },
+};
+
+/**
+ * Handler for image resizing with configurable width
+ */
+const resizeImage: IpcHandler = {
+  name: "resize-image",
+  handler: async (
+    _,
+    params: {
+      imagePath: string;
+      width: number;
+      outputPath?: string;
+      deleteOriginal?: boolean;
+    }
+  ) => {
+    const { imagePath, width, outputPath, deleteOriginal = false } = params;
+    const result = await ImageService.resizeImage(
+      imagePath,
+      width,
+      outputPath,
+      deleteOriginal
+    );
+
+    if (result.success) {
+      console.log(`Image resized: ${imagePath} -> ${result.outputPath}`);
+    } else {
+      console.error(`Image resize failed: ${result.message}`);
+    }
+
+    return result;
+  },
+};
+
+/**
+ * Handler for image manipulation (brightness, contrast, blur, etc.)
+ */
+const manipulateImage: IpcHandler = {
+  name: "manipulate-image",
+  handler: async (
+    _,
+    params: {
+      imagePath: string;
+      manipulations: ImageManipulationOptions;
+      outputPath?: string;
+      deleteOriginal?: boolean;
+    }
+  ) => {
+    const {
+      imagePath,
+      manipulations,
+      outputPath,
+      deleteOriginal = false,
+    } = params;
+    const result = await ImageService.manipulateImage(
+      imagePath,
+      manipulations,
+      outputPath,
+      deleteOriginal
+    );
+
+    if (result.success) {
+      console.log(`Image manipulated: ${imagePath} -> ${result.outputPath}`);
+    } else {
+      console.error(`Image manipulation failed: ${result.message}`);
+    }
+
+    return result;
+  },
+};
+
+/**
+ * Handler for getting image metadata
+ */
+const getImageInfo: IpcHandler = {
+  name: "get-image-info",
+  handler: async (_, imagePath: string) => {
+    const result = await ImageService.getImageInfo(imagePath);
+
+    if (result.success) {
+      console.log(`Image info retrieved for: ${imagePath}`);
+    } else {
+      console.error(`Failed to get image info: ${result.message}`);
+    }
+
+    return result;
+  },
+};
+
+/**
+ * Handler for creating thumbnails
+ */
+const createThumbnail: IpcHandler = {
+  name: "create-thumbnail",
+  handler: async (
+    _,
+    params: {
+      imagePath: string;
+      size?: number;
+      outputPath?: string;
+      quality?: number;
+    }
+  ) => {
+    const { imagePath, size = 200, outputPath, quality = 80 } = params;
+    const result = await ImageService.createThumbnail(
+      imagePath,
+      size,
+      outputPath,
+      quality
+    );
+
+    if (result.success) {
+      console.log(`Thumbnail created: ${imagePath} -> ${result.outputPath}`);
+    } else {
+      console.error(`Thumbnail creation failed: ${result.message}`);
+    }
+
+    return result;
+  },
+};
+
+/**
+ * Handler for batch processing images
+ */
+const batchProcessImages: IpcHandler = {
+  name: "batch-process-images",
+  handler: async (
+    _,
+    params: {
+      imagePaths: string[];
+      operation: "webp" | "resize" | "thumbnail";
+      options?: ImageConversionOptions & { size?: number };
+    }
+  ) => {
+    const { imagePaths, operation, options = {} } = params;
+    const results = await ImageService.batchProcess(
+      imagePaths,
+      operation,
+      options
+    );
+
+    const successCount = results.filter((r) => r.success).length;
+    console.log(
+      `Batch processing completed: ${successCount}/${results.length} successful`
+    );
+
+    return {
+      success: true,
+      message: `Batch processing completed: ${successCount}/${results.length} successful`,
+      results,
+    };
   },
 };
 
 export const imageHandlers: IpcModule = {
-  getHandlers: () => [genBlue, convertToWebp, convertAndResizeToWebp],
+  getHandlers: () => [
+    genBlue,
+    convertToWebp,
+    convertAndResizeToWebp,
+    convertToWebpAdvanced,
+    resizeImage,
+    manipulateImage,
+    getImageInfo,
+    createThumbnail,
+    batchProcessImages,
+  ],
 };

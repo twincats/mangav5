@@ -17,7 +17,7 @@ export default defineConfig({
       )
     }),
     component({
-      resolvers: [QuasarResolver],
+      resolvers: [QuasarResolver()],
     }),
   ],
 })
