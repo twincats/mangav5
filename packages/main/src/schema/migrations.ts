@@ -1,9 +1,41 @@
 import { sql } from 'drizzle-orm';
 import { Database } from 'better-sqlite3';
 
+// Migration version management
+function getCurrentVersion(sqlite: Database): string {
+  try {
+    const result = sqlite.prepare('SELECT version FROM __migrations__ ORDER BY applied_at DESC LIMIT 1').get() as { version: string } | undefined;
+    return result?.version || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+
+function updateVersion(sqlite: Database, version: string): void {
+  sqlite.prepare('INSERT INTO __migrations__ (version) VALUES (?)').run(version);
+}
+
 export async function runMigrations(sqlite: Database) {
   try {
-    console.log('Running database migrations...');
+    // Create migrations table if it doesn't exist
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS __migrations__ (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        version TEXT NOT NULL UNIQUE,
+        applied_at TEXT DEFAULT (datetime('now'))
+      );
+    `);
+
+    // Check current database version
+    const currentVersion = getCurrentVersion(sqlite);
+    const targetVersion = '1.0.0'; // Current schema version
+    
+    if (currentVersion === targetVersion) {
+      console.log('Database is up to date, no migrations needed');
+      return;
+    }
+
+    console.log(`Running database migrations from ${currentVersion} to ${targetVersion}...`);
     
     // Create tables if they don't exist
     sqlite.exec(`
@@ -118,6 +150,9 @@ export async function runMigrations(sqlite: Database) {
       WHERE created_at = 'CURRENT_TIMESTAMP'
     `).run();
 
+    // Update database version
+    updateVersion(sqlite, targetVersion);
+    
     console.log('Database migrations completed successfully');
   } catch (error) {
     console.error('Migration error:', error);

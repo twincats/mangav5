@@ -16,15 +16,18 @@ import { join } from "path";
 import fs from "node:fs";
 
 // Initialize the database and run migrations when the app starts
-let dbInitialized = false;
 let mangaRepository: MangaRepository;
 
 const initializeDatabase = async () => {
-  if (!dbInitialized) {
+  if (!mangaRepository) {
     try {
-      // Initialize database connection and run migrations
+      // Get database manager instance (will initialize if needed)
       const dbManager = DatabaseManager.getInstance();
-      await dbManager.initialize();
+      
+      // Only initialize if not already initialized
+      if (!dbManager.isReady()) {
+        await dbManager.initialize();
+      }
 
       // Create repository instance
       mangaRepository = new MangaRepository();
@@ -32,10 +35,9 @@ const initializeDatabase = async () => {
       // Initialize default config values if they don't exist
       await initializeDefaultConfig(mangaRepository);
 
-      dbInitialized = true;
-      console.log("Database initialized successfully");
+      console.log("Manga repository initialized successfully");
     } catch (error) {
-      console.error("Failed to initialize database:", error);
+      console.error("Failed to initialize manga repository:", error);
       throw error;
     }
   }

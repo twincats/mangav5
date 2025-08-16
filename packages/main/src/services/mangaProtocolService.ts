@@ -196,7 +196,7 @@ export function registerMangaProtocol() {
       const host = decodeURIComponent(url.hostname); // manga title
       const chapterPath = decodeURIComponent(url.pathname).slice(1); // remove leading "/"
       const fullPath = path.join(baseMangaDir, host, chapterPath);
-      console.log(fullPath);
+      // console.log(fullPath); // TODO: remove this
 
       // 1. Serve from actual file (folder)
       if (fs.existsSync(fullPath)) {

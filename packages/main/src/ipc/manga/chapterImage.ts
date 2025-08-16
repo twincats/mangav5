@@ -27,20 +27,15 @@ const chapterImageGetImageList: ImageListHandler = {
 
 const chapterImageClearZipCache: ClearCacheHandler = {
   name: "chapterImage:clearZipCache",
-  handler: async (_, url: string): IpcResult<boolean> => {
+  handler: async (): IpcResult<boolean> => {
     try {
-      // Validate URL if provided
-      if (url && !InputValidator.validateUrl(url)) {
-        return createErrorResponse("Invalid URL format");
-      }
-
       clearZipCache();
       return createSuccessResponse(true, "Zip cache cleared successfully");
     } catch (error) {
       return createErrorResponse(error as Error, "Failed to clear zip cache");
     }
   },
-  validateInput: (url: string) => !url || InputValidator.validateUrl(url)
+  validateInput: () => true
 };
 
 export const chapterImageHandlers: IpcModule = {

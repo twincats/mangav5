@@ -29,7 +29,7 @@ export class InputValidator {
 
   static validateMangaTitle(title: string): boolean {
     // Basic validation for manga title
-    return title && title.trim().length > 0 && title.trim().length <= 500;
+    return Boolean(title) && title.trim().length > 0 && title.trim().length <= 500;
   }
 
   static validateChapterNumber(chapterNumber: number): boolean {
