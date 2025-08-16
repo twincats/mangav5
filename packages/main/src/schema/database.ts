@@ -5,6 +5,7 @@ import { join } from 'path';
 import { app } from 'electron';
 import * as schema from './manga.js';
 import { runMigrations } from './migrations.js';
+import { existsSync } from 'fs';
 
 export class DatabaseManager {
   private static instance: DatabaseManager;
@@ -34,7 +35,13 @@ export class DatabaseManager {
 
     try {
       const dbPath = this.getDatabasePath();
-      console.log(`Initializing database at: ${dbPath}`);
+      
+      // Check if database file exists and log appropriately
+      if (existsSync(dbPath)) {
+        console.log(`Connecting to existing database at: ${dbPath}`);
+      } else {
+        console.log(`Creating new database at: ${dbPath}`);
+      }
       
       // Create a new database connection
       this.sqlite = new Database(dbPath);
