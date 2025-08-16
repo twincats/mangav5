@@ -45,6 +45,7 @@ export const chapters = sqliteTable('Chapters', {
   translatorGroup: text('translator_group'),
   releaseTime: text('release_time'),
   language: text('language'),
+  statusRead: integer('status_read', { mode: 'boolean' }).default(false),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 

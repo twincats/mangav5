@@ -28,7 +28,7 @@ export async function runMigrations(sqlite: Database) {
 
     // Check current database version
     const currentVersion = getCurrentVersion(sqlite);
-    const targetVersion = '1.0.0'; // Current schema version
+    const targetVersion = '1.1.0'; // Updated schema version with status_read field
     
     if (currentVersion === targetVersion) {
       console.log('Database is up to date, no migrations needed');
@@ -88,6 +88,7 @@ export async function runMigrations(sqlite: Database) {
         translator_group TEXT,
         release_time TEXT,
         language TEXT,
+        status_read INTEGER DEFAULT 0,
         created_at TEXT DEFAULT (datetime('now')),
         FOREIGN KEY (manga_id) REFERENCES Manga(manga_id)
       );
@@ -110,6 +111,20 @@ export async function runMigrations(sqlite: Database) {
       sqlite.prepare('INSERT INTO MangaStatus (status_name) VALUES (?)').run('Completed');
       sqlite.prepare('INSERT INTO MangaStatus (status_name) VALUES (?)').run('Hiatus');
       sqlite.prepare('INSERT INTO MangaStatus (status_name) VALUES (?)').run('Cancelled');
+    }
+
+    // Add status_read field to existing Chapters table if it doesn't exist
+    try {
+      const columnExists = sqlite.prepare("PRAGMA table_info(Chapters)").all() as Array<{name: string}>;
+      const hasStatusRead = columnExists.some(col => col.name === 'status_read');
+      
+      if (!hasStatusRead) {
+        console.log('Adding status_read field to Chapters table...');
+        sqlite.exec('ALTER TABLE Chapters ADD COLUMN status_read INTEGER DEFAULT 0');
+        console.log('status_read field added successfully');
+      }
+    } catch (error) {
+      console.log('Chapters table might not exist yet, skipping status_read addition');
     }
 
     // Fix existing timestamp fields if they contain "CURRENT_TIMESTAMP" text

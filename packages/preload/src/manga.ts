@@ -22,6 +22,7 @@ export interface ChapterData {
   translatorGroup?: string;
   releaseTime?: string;
   language?: string;
+  statusRead?: boolean;
 }
 
 export interface ScrapingRuleData {
@@ -256,6 +257,27 @@ export const mangaAPI = {
   deleteChapter: (chapterId: number) => withValidation(
     [() => validateId(chapterId, "chapter")],
     () => createIpcCall<boolean>("manga:deleteChapter", chapterId)
+  ),
+
+  // Chapter read status operations
+  updateChapterReadStatus: (chapterId: number, statusRead: boolean) => withValidation(
+    [() => validateId(chapterId, "chapter")],
+    () => createIpcCall<boolean>("manga:updateChapterReadStatus", chapterId, statusRead)
+  ),
+
+  markChapterAsRead: (chapterId: number) => withValidation(
+    [() => validateId(chapterId, "chapter")],
+    () => createIpcCall<boolean>("manga:markChapterAsRead", chapterId)
+  ),
+
+  markChapterAsUnread: (chapterId: number) => withValidation(
+    [() => validateId(chapterId, "chapter")],
+    () => createIpcCall<boolean>("manga:markChapterAsUnread", chapterId)
+  ),
+
+  getChaptersByReadStatus: (mangaId: number, statusRead: boolean) => withValidation(
+    [() => validateId(mangaId, "manga")],
+    () => createIpcCall<ChapterResponse[]>("manga:getChaptersByReadStatus", mangaId, statusRead)
   ),
 
   // Manga status operations

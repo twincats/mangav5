@@ -318,6 +318,55 @@ const deleteChapter = async (_event: IpcMainInvokeEvent, chapterId: number): Ipc
   }
 };
 
+// Chapter read status handlers
+const updateChapterReadStatus = async (
+  _event: IpcMainInvokeEvent,
+  chapterId: number,
+  statusRead: boolean
+): IpcResult<boolean> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.updateChapterReadStatus(chapterId, statusRead);
+    return createSuccessResponse(result.changes > 0, "Chapter read status updated successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to update chapter read status");
+  }
+};
+
+const markChapterAsRead = async (_event: IpcMainInvokeEvent, chapterId: number): IpcResult<boolean> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.markChapterAsRead(chapterId);
+    return createSuccessResponse(result.changes > 0, "Chapter marked as read successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to mark chapter as read");
+  }
+};
+
+const markChapterAsUnread = async (_event: IpcMainInvokeEvent, chapterId: number): IpcResult<boolean> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.markChapterAsUnread(chapterId);
+    return createSuccessResponse(result.changes > 0, "Chapter marked as unread successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to mark chapter as unread");
+  }
+};
+
+const getChaptersByReadStatus = async (
+  _event: IpcMainInvokeEvent,
+  mangaId: number,
+  statusRead: boolean
+): IpcResult<any[]> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.getChaptersByReadStatus(mangaId, statusRead);
+    return createSuccessResponse(result, "Chapters retrieved by read status successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to retrieve chapters by read status");
+  }
+};
+
 // Manga status handlers
 const getAllStatuses = async (_event: IpcMainInvokeEvent): IpcResult<any[]> => {
   try {
@@ -532,6 +581,10 @@ export const mangaDatabaseHandlers: IpcModule = {
     { name: "manga:createChapter", handler: createChapter },
     { name: "manga:updateChapter", handler: updateChapter },
     { name: "manga:deleteChapter", handler: deleteChapter },
+    { name: "manga:updateChapterReadStatus", handler: updateChapterReadStatus },
+    { name: "manga:markChapterAsRead", handler: markChapterAsRead },
+    { name: "manga:markChapterAsUnread", handler: markChapterAsUnread },
+    { name: "manga:getChaptersByReadStatus", handler: getChaptersByReadStatus },
 
     // Manga status handlers
     { name: "manga:getAllStatuses", handler: getAllStatuses },

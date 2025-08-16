@@ -1,4 +1,4 @@
-import { eq, like } from "drizzle-orm";
+import { eq, like, and } from "drizzle-orm";
 import { schema } from "./database.js";
 import { BaseRepository } from "./repositories/BaseRepository.js";
 import { sql } from "drizzle-orm";
@@ -25,6 +25,7 @@ export interface ChapterData {
   translatorGroup?: string;
   releaseTime?: string;
   language?: string;
+  statusRead?: boolean;
 }
 
 export interface ScrapingRuleData {
@@ -276,6 +277,49 @@ export class MangaRepository extends BaseRepository {
         .where(eq(schema.chapters.chapterId, chapterId))
         .run(),
       'deleteChapter'
+    );
+  }
+
+  // Update chapter read status
+  async updateChapterReadStatus(chapterId: number, statusRead: boolean) {
+    this.logOperation('updateChapterReadStatus', `Chapter ID: ${chapterId}, Status: ${statusRead}`);
+    this.validateRequired({ chapterId, statusRead }, ['chapterId', 'statusRead']);
+    
+    return this.safeExecute(
+      () => this.db
+        .update(schema.chapters)
+        .set({ statusRead })
+        .where(eq(schema.chapters.chapterId, chapterId))
+        .run(),
+      'updateChapterReadStatus'
+    );
+  }
+
+  // Mark chapter as read
+  async markChapterAsRead(chapterId: number) {
+    return this.updateChapterReadStatus(chapterId, true);
+  }
+
+  // Mark chapter as unread
+  async markChapterAsUnread(chapterId: number) {
+    return this.updateChapterReadStatus(chapterId, false);
+  }
+
+  // Get chapters by read status
+  async getChaptersByReadStatus(mangaId: number, statusRead: boolean) {
+    this.logOperation('getChaptersByReadStatus', `Manga ID: ${mangaId}, Status: ${statusRead}`);
+    this.validateRequired({ mangaId, statusRead }, ['mangaId', 'statusRead']);
+    
+    return this.safeExecute(
+      () => this.db
+        .select()
+        .from(schema.chapters)
+        .where(and(
+          eq(schema.chapters.mangaId, mangaId),
+          eq(schema.chapters.statusRead, statusRead)
+        ))
+        .orderBy(schema.chapters.chapterNumber),
+      'getChaptersByReadStatus'
     );
   }
 
