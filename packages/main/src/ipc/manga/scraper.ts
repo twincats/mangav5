@@ -1,23 +1,47 @@
-import { IpcHandler, IpcModule } from "../types.js";
+import { IpcHandler, IpcModule, IpcResult } from "../types.js";
+import { createSuccessResponse, createErrorResponse } from "../utils/errorHandler.js";
+import { InputValidator } from "../utils/validation.js";
 import { scrapTitle, scrapChapter} from '../../services/scraperService.js';
 import type { PuppeteerLifeCycleEvent } from 'puppeteer-core';
 
-const scraperTitle: IpcHandler = {
+const scraperTitle: IpcHandler<[string], any> = {
   name: "scraper:title",
-  handler: async (_, url: string) => {
-    return await scrapTitle(url);
+  handler: async (_, url: string): IpcResult<any> => {
+    // Validate URL
+    if (!InputValidator.validateUrl(url)) {
+      return createErrorResponse("Invalid URL format - only HTTP/HTTPS allowed");
+    }
+
+    try {
+      const result = await scrapTitle(url);
+      return createSuccessResponse(result, "Title scraped successfully");
+    } catch (error) {
+      return createErrorResponse(error as Error, "Failed to scrape title");
+    }
   },
+  validateInput: (url: string) => InputValidator.validateUrl(url)
 };
 
-const scraperChapter: IpcHandler = {
+const scraperChapter: IpcHandler<[string], any> = {
   name: "scraper:chapter",
-  handler: async (_, url: string) => {
-    return await scrapChapter(url);
+  handler: async (_, url: string): IpcResult<any> => {
+    // Validate URL
+    if (!InputValidator.validateUrl(url)) {
+      return createErrorResponse("Invalid URL format - only HTTP/HTTPS allowed");
+    }
+
+    try {
+      const result = await scrapChapter(url);
+      return createSuccessResponse(result, "Chapter scraped successfully");
+    } catch (error) {
+      return createErrorResponse(error as Error, "Failed to scrape chapter");
+    }
   },
+  validateInput: (url: string) => InputValidator.validateUrl(url)
 };
 
 export const scraperHandlers: IpcModule = {
-  getHandlers: () => [scraperTitle,scraperChapter],
+  getHandlers: () => [scraperTitle, scraperChapter],
 };
 
 export interface ScraperRules {

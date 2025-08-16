@@ -53,72 +53,305 @@ export interface DirectoryScanResult {
   totalChapters: number;
 }
 
-// Manga database API
+// Enhanced response interface
+export interface IpcResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+// Response data types yang lebih spesifik
+export interface MangaResponse extends MangaData {
+  id: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Special interface for latest manga with chapter info (flat structure)
+export interface LatestMangaResponse {
+  id: number;
+  mainTitle: string;
+  statusName: string;
+  chapterID: number;
+  chapterNumber: number;
+  downloadTime: string;
+}
+
+export interface ChapterResponse extends ChapterData {
+  id: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface MangaStatusResponse {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+export interface ScrapingRuleResponse extends ScrapingRuleData {
+  id: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ConfigResponse {
+  key: string;
+  value: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Advanced utility functions dengan higher-order functions
+const createIpcCall = <T>(channel: string, ...args: any[]): Promise<IpcResponse<T>> => {
+  return ipcRenderer.invoke(channel, ...args);
+};
+
+const createErrorResponse = (error: string): IpcResponse<never> => ({
+  success: false,
+  error
+});
+
+// Higher-order function untuk error handling
+const withErrorHandling = <T>(
+  operation: () => Promise<IpcResponse<T>>,
+  fallbackError: string = "Unknown error occurred"
+): Promise<IpcResponse<T>> => {
+  return operation().catch(error => 
+    createErrorResponse(error instanceof Error ? error.message : fallbackError)
+  );
+};
+
+// Validation utilities dengan better error handling
+const ValidationResult = {
+  success: <T>(data: T): IpcResponse<T> => ({ success: true, data }),
+  error: (message: string): IpcResponse<never> => ({ success: false, error: message })
+};
+
+const validateId = (id: number, name: string): IpcResponse<never> | null => {
+  return (!id || id <= 0) ? ValidationResult.error(`Invalid ${name} ID`) : null;
+};
+
+const validateString = (value: string, name: string): IpcResponse<never> | null => {
+  return (!value || value.trim().length === 0) ? ValidationResult.error(`${name} cannot be empty`) : null;
+};
+
+const validateArray = (arr: any[], name: string, maxLength?: number): IpcResponse<never> | null => {
+  if (!Array.isArray(arr) || arr.length === 0) {
+    return ValidationResult.error(`${name} cannot be empty`);
+  }
+  if (maxLength && arr.length > maxLength) {
+    return ValidationResult.error(`Too many ${name} (maximum ${maxLength})`);
+  }
+  return null;
+};
+
+// Higher-order function untuk validation + operation
+const withValidation = <T>(
+  validations: (() => IpcResponse<never> | null)[],
+  operation: () => Promise<IpcResponse<T>>
+): Promise<IpcResponse<T>> => {
+  // Run all validations
+  for (const validation of validations) {
+    const result = validation();
+    if (result) return Promise.resolve(result);
+  }
+  
+  // If all validations pass, run operation
+  return withErrorHandling(operation);
+};
+
+// Simple URL validator for preload script
+const InputValidator = {
+  validateUrl: (url: string): boolean => {
+    try {
+      const urlObj = new URL(url);
+      return ['http:', 'https:'].includes(urlObj.protocol);
+    } catch {
+      return false;
+    }
+  }
+};
+
+// Enhanced manga API dengan advanced utility functions dan proper types
 export const mangaAPI = {
   // Manga operations
-  getAllManga: () => ipcRenderer.invoke("manga:getAll"),
-  getMangaById: (id: number) => ipcRenderer.invoke("manga:getById", id),
-  searchManga: (title: string) => ipcRenderer.invoke("manga:search", title),
-  createManga: (mangaData: MangaData) =>
-    ipcRenderer.invoke("manga:create", mangaData),
-  updateManga: (id: number, mangaData: Partial<MangaData>) =>
-    ipcRenderer.invoke("manga:update", id, mangaData),
-  deleteManga: (id: number) => ipcRenderer.invoke("manga:delete", id),
-  getLatestManga:() => ipcRenderer.invoke("manga:latest"),
+  getAllManga: () => withErrorHandling(
+    () => createIpcCall<MangaResponse[]>("manga:getAll")
+  ),
+
+  getMangaById: (id: number) => withValidation(
+    [() => validateId(id, "manga")],
+    () => createIpcCall<MangaResponse>("manga:getById", id)
+  ),
+
+  searchManga: (title: string) => withValidation(
+    [() => validateString(title, "Search title")],
+    () => createIpcCall<MangaResponse[]>("manga:search", title.trim())
+  ),
+
+  createManga: (mangaData: MangaData) => withValidation(
+    [() => validateString(mangaData.mainTitle, "Manga title")],
+    () => createIpcCall<MangaResponse>("manga:create", mangaData)
+  ),
+
+  updateManga: (id: number, mangaData: Partial<MangaData>) => withValidation(
+    [() => validateId(id, "manga")],
+    () => createIpcCall<MangaResponse>("manga:update", id, mangaData)
+  ),
+
+  deleteManga: (id: number) => withValidation(
+    [() => validateId(id, "manga")],
+    () => createIpcCall<boolean>("manga:delete", id)
+  ),
+
+          getLatestManga: () => withErrorHandling(
+          () => createIpcCall<LatestMangaResponse[]>("manga:latest")
+        ),
 
   // Alternative titles operations
-  getAlternativeTitles: (mangaId: number) =>
-    ipcRenderer.invoke("manga:getAlternativeTitles", mangaId),
-  addAlternativeTitle: (mangaId: number, title: string) =>
-    ipcRenderer.invoke("manga:addAlternativeTitle", mangaId, title),
-  removeAlternativeTitle: (altId: number) =>
-    ipcRenderer.invoke("manga:removeAlternativeTitle", altId),
+  getAlternativeTitles: (mangaId: number) => withValidation(
+    [() => validateId(mangaId, "manga")],
+    () => createIpcCall<string[]>("manga:getAlternativeTitles", mangaId)
+  ),
+
+  addAlternativeTitle: (mangaId: number, title: string) => withValidation(
+    [
+      () => validateId(mangaId, "manga"),
+      () => validateString(title, "Alternative title")
+    ],
+    () => createIpcCall<MangaResponse>("manga:addAlternativeTitle", mangaId, title.trim())
+  ),
+
+  removeAlternativeTitle: (altId: number) => withValidation(
+    [() => validateId(altId, "alternative title")],
+    () => createIpcCall<boolean>("manga:removeAlternativeTitle", altId)
+  ),
 
   // Chapter operations
-  getChapters: (mangaId: number) =>
-    ipcRenderer.invoke("manga:getChapters", mangaId),
-  getChapterById: (chapterId: number) =>
-    ipcRenderer.invoke("manga:getChapterById", chapterId),
-  createChapter: (chapterData: ChapterData) =>
-    ipcRenderer.invoke("manga:createChapter", chapterData),
-  updateChapter: (chapterId: number, chapterData: Partial<ChapterData>) =>
-    ipcRenderer.invoke("manga:updateChapter", chapterId, chapterData),
-  deleteChapter: (chapterId: number) =>
-    ipcRenderer.invoke("manga:deleteChapter", chapterId),
+  getChapters: (mangaId: number) => withValidation(
+    [() => validateId(mangaId, "manga")],
+    () => createIpcCall<ChapterResponse[]>("manga:getChapters", mangaId)
+  ),
+
+  getChapterById: (chapterId: number) => withValidation(
+    [() => validateId(chapterId, "chapter")],
+    () => createIpcCall<ChapterResponse>("manga:getChapterById", chapterId)
+  ),
+
+  createChapter: (chapterData: ChapterData) => withValidation(
+    [
+      () => validateId(chapterData.mangaId, "manga"),
+      () => validateId(chapterData.chapterNumber, "chapter number")
+    ],
+    () => createIpcCall<ChapterResponse>("manga:createChapter", chapterData)
+  ),
+
+  updateChapter: (chapterId: number, chapterData: Partial<ChapterData>) => withValidation(
+    [() => validateId(chapterId, "chapter")],
+    () => createIpcCall<ChapterResponse>("manga:updateChapter", chapterId, chapterData)
+  ),
+
+  deleteChapter: (chapterId: number) => withValidation(
+    [() => validateId(chapterId, "chapter")],
+    () => createIpcCall<boolean>("manga:deleteChapter", chapterId)
+  ),
 
   // Manga status operations
-  getAllStatuses: () => ipcRenderer.invoke("manga:getAllStatuses"),
+  getAllStatuses: () => withErrorHandling(
+    () => createIpcCall<MangaStatusResponse[]>("manga:getAllStatuses")
+  ),
 
   // Scraping rules operations
-  getAllScrapingRules: () => ipcRenderer.invoke("manga:getAllScrapingRules"),
-  getScrapingRuleById: (ruleId: number) =>
-    ipcRenderer.invoke("manga:getScrapingRuleById", ruleId),
-  createScrapingRule: (ruleData: ScrapingRuleData) =>
-    ipcRenderer.invoke("manga:createScrapingRule", ruleData),
-  updateScrapingRule: (ruleId: number, ruleData: Partial<ScrapingRuleData>) =>
-    ipcRenderer.invoke("manga:updateScrapingRule", ruleId, ruleData),
-  deleteScrapingRule: (ruleId: number) =>
-    ipcRenderer.invoke("manga:deleteScrapingRule", ruleId),
+  getAllScrapingRules: () => withErrorHandling(
+    () => createIpcCall<ScrapingRuleResponse[]>("manga:getAllScrapingRules")
+  ),
+
+  getScrapingRuleById: (ruleId: number) => withValidation(
+    [() => validateId(ruleId, "rule")],
+    () => createIpcCall<ScrapingRuleResponse>("manga:getScrapingRuleById", ruleId)
+  ),
+
+  createScrapingRule: (ruleData: ScrapingRuleData) => {
+    // Custom validation untuk URL
+    if (!ruleData.websiteUrl || !InputValidator.validateUrl(ruleData.websiteUrl)) {
+      return Promise.resolve(createErrorResponse("Invalid website URL"));
+    }
+    
+    return withValidation(
+      [() => validateString(ruleData.rulesJson, "Rules JSON")],
+      () => createIpcCall<ScrapingRuleResponse>("manga:createScrapingRule", ruleData)
+    );
+  },
+
+  updateScrapingRule: (ruleId: number, ruleData: Partial<ScrapingRuleData>) => {
+    // Custom validation untuk URL jika ada
+    if (ruleData.websiteUrl && !InputValidator.validateUrl(ruleData.websiteUrl)) {
+      return Promise.resolve(createErrorResponse("Invalid website URL"));
+    }
+    
+    return withValidation(
+      [() => validateId(ruleId, "rule")],
+      () => createIpcCall<ScrapingRuleResponse>("manga:updateScrapingRule", ruleId, ruleData)
+    );
+  },
+
+  deleteScrapingRule: (ruleId: number) => withValidation(
+    [() => validateId(ruleId, "rule")],
+    () => createIpcCall<boolean>("manga:deleteScrapingRule", ruleId)
+  ),
 
   // Database path and initialization
-  getDatabasePath: () => ipcRenderer.invoke("manga:getDatabasePath"),
-  checkDatabaseExist: () => ipcRenderer.invoke("manga:checkDatabaseExist"),
-  initDb: () => ipcRenderer.invoke("manga:initDb"),
+  getDatabasePath: () => withErrorHandling(
+    () => createIpcCall<string>("manga:getDatabasePath")
+  ),
+
+  checkDatabaseExist: () => withErrorHandling(
+    () => createIpcCall<boolean>("manga:checkDatabaseExist")
+  ),
+
+  initDb: () => withErrorHandling(
+    () => createIpcCall<{ success: boolean; message: string }>("manga:initDb")
+  ),
 
   // Config operations
-  getConfig: (key: string) => ipcRenderer.invoke("manga:getConfig", key),
-  getAllConfig: () => ipcRenderer.invoke("manga:getAllConfig"),
-  setConfig: (configData: ConfigData) =>
-    ipcRenderer.invoke("manga:setConfig", configData),
-  deleteConfig: (key: string) => ipcRenderer.invoke("manga:deleteConfig", key),
+  getConfig: (key: string) => withValidation(
+    [() => validateString(key, "Config key")],
+    () => createIpcCall<ConfigResponse>("manga:getConfig", key.trim())
+  ),
+
+  getAllConfig: () => withErrorHandling(
+    () => createIpcCall<ConfigResponse[]>("manga:getAllConfig")
+  ),
+
+  setConfig: (configData: ConfigData) => withValidation(
+    [() => validateString(configData.key, "Config key")],
+    () => createIpcCall<ConfigResponse>("manga:setConfig", configData)
+  ),
+
+  deleteConfig: (key: string) => withValidation(
+    [() => validateString(key, "Config key")],
+    () => createIpcCall<boolean>("manga:deleteConfig", key.trim())
+  ),
 
   // Batch insert operations
-  batchInsertManga: (mangaList: BatchMangaData[]) =>
-    ipcRenderer.invoke("manga:batchInsert", mangaList),
-  batchInsertChapters: (mangaId: number, chapters: Omit<ChapterData, 'mangaId'>[]) =>
-    ipcRenderer.invoke("manga:batchInsertChapters", mangaId, chapters),
+  batchInsertManga: (mangaList: BatchMangaData[]) => withValidation(
+    [() => validateArray(mangaList, "manga", 1000)],
+    () => createIpcCall<BatchInsertResult>("manga:batchInsert", mangaList)
+  ),
+
+  batchInsertChapters: (mangaId: number, chapters: Omit<ChapterData, 'mangaId'>[]) => withValidation(
+    [
+      () => validateId(mangaId, "manga"),
+      () => validateArray(chapters, "chapters", 1000)
+    ],
+    () => createIpcCall<BatchInsertResult>("manga:batchInsertChapters", mangaId, chapters)
+  ),
 
   // Directory scan operations
-  scanDirectoryAndImport: (directoryPath: string) =>
-    ipcRenderer.invoke("manga:scanDirectoryAndImport", directoryPath),
+  scanDirectoryAndImport: (directoryPath: string) => withValidation(
+    [() => validateString(directoryPath, "Directory path")],
+    () => createIpcCall<{ scanResult: DirectoryScanResult; importResult: BatchInsertResult }>("manga:scanDirectoryAndImport", directoryPath.trim())
+  ),
 };

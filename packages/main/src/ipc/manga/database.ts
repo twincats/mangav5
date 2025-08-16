@@ -1,5 +1,6 @@
 import { IpcMainInvokeEvent, app } from "electron";
-import { IpcHandler, IpcModule } from "../types.js";
+import { IpcHandler, IpcModule, IpcResult } from "../types.js";
+import { createSuccessResponse, createErrorResponse } from "../utils/errorHandler.js";
 import {
   MangaRepository,
   MangaData,
@@ -66,39 +67,67 @@ const initializeDefaultConfig = async (repo: MangaRepository) => {
 };
 
 // Manga handlers
-const getAllManga = async (_event: IpcMainInvokeEvent) => {
-  const repo = await initializeDatabase();
-  return repo.getAllManga();
+const getAllManga = async (_event: IpcMainInvokeEvent): IpcResult<any[]> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.getAllManga();
+    return createSuccessResponse(result, "Manga retrieved successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to retrieve manga");
+  }
 };
 
-const getMangaById = async (_event: IpcMainInvokeEvent, id: number) => {
-  const repo = await initializeDatabase();
-  return repo.getMangaById(id);
+const getMangaById = async (_event: IpcMainInvokeEvent, id: number): IpcResult<any> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.getMangaById(id);
+    if (!result) {
+      return createErrorResponse("Manga not found");
+    }
+    return createSuccessResponse(result, "Manga retrieved successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to retrieve manga");
+  }
 };
 
 const searchMangaByTitle = async (
   _event: IpcMainInvokeEvent,
   title: string
-) => {
-  const repo = await initializeDatabase();
-  return repo.searchMangaByTitle(title);
+): IpcResult<any[]> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.searchMangaByTitle(title);
+    return createSuccessResponse(result, "Manga search completed");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to search manga");
+  }
 };
 
 const createManga = async (
   _event: IpcMainInvokeEvent,
   mangaData: MangaData
-) => {
-  const repo = await initializeDatabase();
-  return repo.createManga(mangaData);
+): IpcResult<any> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.createManga(mangaData);
+    return createSuccessResponse(result, "Manga created successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to create manga");
+  }
 };
 
 // Batch insert manga with chapters
 const batchInsertManga = async (
   _event: IpcMainInvokeEvent,
   mangaList: BatchMangaData[]
-): Promise<BatchInsertResult> => {
-  const repo = await initializeDatabase();
-  return repo.batchInsertManga(mangaList);
+): IpcResult<BatchInsertResult> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.batchInsertManga(mangaList);
+    return createSuccessResponse(result, "Batch insert completed");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to batch insert manga");
+  }
 };
 
 // Batch insert chapters for existing manga
@@ -106,16 +135,21 @@ const batchInsertChapters = async (
   _event: IpcMainInvokeEvent,
   mangaId: number,
   chapters: Omit<ChapterData, 'mangaId'>[]
-): Promise<BatchInsertResult> => {
-  const repo = await initializeDatabase();
-  return repo.batchInsertChapters(mangaId, chapters);
+): IpcResult<BatchInsertResult> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.batchInsertChapters(mangaId, chapters);
+    return createSuccessResponse(result, "Chapters batch insert completed");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to batch insert chapters");
+  }
 };
 
 // Scan directory and auto-import manga
 const scanDirectoryAndImport = async (
   _event: IpcMainInvokeEvent,
   mangaDirectory: string
-): Promise<{ scanResult: DirectoryScanResult; importResult: BatchInsertResult }> => {
+): IpcResult<{ scanResult: DirectoryScanResult; importResult: BatchInsertResult }> => {
   try {
     // 1. Scan directory
     const scanner = new DirectoryScanner(mangaDirectory);
@@ -143,11 +177,12 @@ const scanDirectoryAndImport = async (
       console.log(`Auto-imported ${importResult.insertedManga} manga with ${importResult.insertedChapters} chapters`);
     }
     
-    return { scanResult, importResult };
+    const result = { scanResult, importResult };
+    return createSuccessResponse(result, "Directory scan and import completed");
     
   } catch (error) {
     console.error('Error scanning directory and importing:', error);
-    throw error;
+    return createErrorResponse(error as Error, "Failed to scan directory and import");
   }
 };
 
@@ -155,179 +190,318 @@ const updateManga = async (
   _event: IpcMainInvokeEvent,
   id: number,
   mangaData: Partial<MangaData>
-) => {
-  const repo = await initializeDatabase();
-  return repo.updateManga(id, mangaData);
+): IpcResult<any> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.updateManga(id, mangaData);
+    return createSuccessResponse(result, "Manga updated successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to update manga");
+  }
 };
 
-const deleteManga = async (_event: IpcMainInvokeEvent, id: number) => {
-  const repo = await initializeDatabase();
-  return repo.deleteManga(id);
+const deleteManga = async (_event: IpcMainInvokeEvent, id: number): IpcResult<boolean> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.deleteManga(id);
+    return createSuccessResponse(result.changes > 0, "Manga deleted successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to delete manga");
+  }
 };
 
 // Alternative titles handlers
 const getAlternativeTitles = async (
   _event: IpcMainInvokeEvent,
   mangaId: number
-) => {
-  const repo = await initializeDatabase();
-  return repo.getAlternativeTitles(mangaId);
+): IpcResult<string[]> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.getAlternativeTitles(mangaId);
+    const titles = result.map(item => item.alternativeTitle);
+    return createSuccessResponse(titles, "Alternative titles retrieved successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to retrieve alternative titles");
+  }
 };
 
 const addAlternativeTitle = async (
   _event: IpcMainInvokeEvent,
   mangaId: number,
   title: string
-) => {
-  const repo = await initializeDatabase();
-  return repo.addAlternativeTitle(mangaId, title);
+): IpcResult<any> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.addAlternativeTitle(mangaId, title);
+    return createSuccessResponse(result, "Alternative title added successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to add alternative title");
+  }
 };
 
 const removeAlternativeTitle = async (
   _event: IpcMainInvokeEvent,
   altId: number
-) => {
-  const repo = await initializeDatabase();
-  return repo.removeAlternativeTitle(altId);
+): IpcResult<boolean> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.removeAlternativeTitle(altId);
+    return createSuccessResponse(result.changes > 0, "Alternative title removed successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to remove alternative title");
+  }
 };
 
 // Chapter handlers
-const getChapters = async (_event: IpcMainInvokeEvent, mangaId: number) => {
-  const repo = await initializeDatabase();
-  return repo.getChapters(mangaId);
+const getChapters = async (_event: IpcMainInvokeEvent, mangaId: number): IpcResult<any[]> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.getChapters(mangaId);
+    return createSuccessResponse(result, "Chapters retrieved successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to retrieve chapters");
+  }
 };
 
 const getChapterById = async (
   _event: IpcMainInvokeEvent,
   chapterId: number
-) => {
-  const repo = await initializeDatabase();
-  return repo.getChapterById(chapterId);
+): IpcResult<any> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.getChapterById(chapterId);
+    if (!result) {
+      return createErrorResponse("Chapter not found");
+    }
+    return createSuccessResponse(result, "Chapter retrieved successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to retrieve chapter");
+  }
 };
 
 const createChapter = async (
   _event: IpcMainInvokeEvent,
   chapterData: ChapterData
-) => {
-  const repo = await initializeDatabase();
-  return repo.createChapter(chapterData);
+): IpcResult<any> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.createChapter(chapterData);
+    return createSuccessResponse(result, "Chapter created successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to create chapter");
+  }
 };
 
 const updateChapter = async (
   _event: IpcMainInvokeEvent,
   chapterId: number,
   chapterData: Partial<ChapterData>
-) => {
-  const repo = await initializeDatabase();
-  return repo.updateChapter(chapterId, chapterData);
+): IpcResult<any> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.updateChapter(chapterId, chapterData);
+    return createSuccessResponse(result, "Chapter updated successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to update chapter");
+  }
 };
 
-const deleteChapter = async (_event: IpcMainInvokeEvent, chapterId: number) => {
-  const repo = await initializeDatabase();
-  return repo.deleteChapter(chapterId);
+const deleteChapter = async (_event: IpcMainInvokeEvent, chapterId: number): IpcResult<boolean> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.deleteChapter(chapterId);
+    return createSuccessResponse(result.changes > 0, "Chapter deleted successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to delete chapter");
+  }
 };
 
 // Manga status handlers
-const getAllStatuses = async (_event: IpcMainInvokeEvent) => {
-  const repo = await initializeDatabase();
-  return repo.getAllStatuses();
+const getAllStatuses = async (_event: IpcMainInvokeEvent): IpcResult<any[]> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.getAllStatuses();
+    return createSuccessResponse(result, "Manga statuses retrieved successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to retrieve manga statuses");
+  }
 };
 
 // Scraping rules handlers
-const getAllScrapingRules = async (_event: IpcMainInvokeEvent) => {
-  const repo = await initializeDatabase();
-  return repo.getAllScrapingRules();
+const getAllScrapingRules = async (_event: IpcMainInvokeEvent): IpcResult<any[]> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.getAllScrapingRules();
+    return createSuccessResponse(result, "Scraping rules retrieved successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to retrieve scraping rules");
+  }
 };
 
 const getScrapingRuleById = async (
   _event: IpcMainInvokeEvent,
   ruleId: number
-) => {
-  const repo = await initializeDatabase();
-  return repo.getScrapingRuleById(ruleId);
+): IpcResult<any> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.getScrapingRuleById(ruleId);
+    if (!result) {
+      return createErrorResponse("Scraping rule not found");
+    }
+    return createSuccessResponse(result, "Scraping rule retrieved successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to retrieve scraping rule");
+  }
 };
 
 const createScrapingRule = async (
   _event: IpcMainInvokeEvent,
   ruleData: ScrapingRuleData
-) => {
-  const repo = await initializeDatabase();
-  return repo.createScrapingRule(ruleData);
+): IpcResult<any> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.createScrapingRule(ruleData);
+    return createSuccessResponse(result, "Scraping rule created successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to create scraping rule");
+  }
 };
 
 const updateScrapingRule = async (
   _event: IpcMainInvokeEvent,
   ruleId: number,
   ruleData: Partial<ScrapingRuleData>
-) => {
-  const repo = await initializeDatabase();
-  return repo.updateScrapingRule(ruleId, ruleData);
+): IpcResult<any> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.updateScrapingRule(ruleId, ruleData);
+    return createSuccessResponse(result, "Scraping rule updated successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to update scraping rule");
+  }
 };
 
 const deleteScrapingRule = async (
   _event: IpcMainInvokeEvent,
   ruleId: number
-) => {
-  const repo = await initializeDatabase();
-  return repo.deleteScrapingRule(ruleId);
+): IpcResult<boolean> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.deleteScrapingRule(ruleId);
+    return createSuccessResponse(result.changes > 0, "Scraping rule deleted successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to delete scraping rule");
+  }
 };
 
 // Config handlers
-const getConfig = async (_event: IpcMainInvokeEvent, key: string) => {
-  const repo = await initializeDatabase();
-  return repo.getConfig(key);
+const getConfig = async (_event: IpcMainInvokeEvent, key: string): IpcResult<any[]> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.getConfig(key);
+    return createSuccessResponse(result, "Config retrieved successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to retrieve config");
+  }
 };
 
-const getAllConfig = async (_event: IpcMainInvokeEvent) => {
-  const repo = await initializeDatabase();
-  return repo.getAllConfig();
+const getAllConfig = async (_event: IpcMainInvokeEvent): IpcResult<any[]> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.getAllConfig();
+    return createSuccessResponse(result, "All configs retrieved successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to retrieve all configs");
+  }
 };
 
 const setConfig = async (
   _event: IpcMainInvokeEvent,
   configData: ConfigData
-) => {
-  const repo = await initializeDatabase();
-  return repo.setConfig(configData);
+): IpcResult<any> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.setConfig(configData);
+    return createSuccessResponse(result, "Config set successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to set config");
+  }
 };
 
-const deleteConfig = async (_event: IpcMainInvokeEvent, key: string) => {
-  const repo = await initializeDatabase();
-  return repo.deleteConfig(key);
+const deleteConfig = async (_event: IpcMainInvokeEvent, key: string): IpcResult<boolean> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.deleteConfig(key);
+    return createSuccessResponse(result.changes > 0, "Config deleted successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to delete config");
+  }
 };
 
 // Export the IPC module
 // getDatabasePath is location database is stored
-const getDatabasePath = async (_event?: IpcMainInvokeEvent) => {
-  // Use the app's user data directory to store the database
-  const userDataPath = app.getPath("userData");
-  return join(userDataPath, "manga.db");
+const getDatabasePath = async (_event?: IpcMainInvokeEvent): IpcResult<string> => {
+  try {
+    // Use the app's user data directory to store the database
+    const userDataPath = app.getPath("userData");
+    const dbPath = join(userDataPath, "manga.db");
+    return createSuccessResponse(dbPath, "Database path retrieved successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to get database path");
+  }
 };
 
 // get
-const checkDatabaseExist = async (_event: IpcMainInvokeEvent) => {
-  const dbPath = await getDatabasePath();
-  return fs.existsSync(dbPath);
+const checkDatabaseExist = async (_event: IpcMainInvokeEvent): IpcResult<boolean> => {
+  try {
+    const dbPath = await getDatabasePath();
+    if (dbPath.success && dbPath.data) {
+      const exists = fs.existsSync(dbPath.data);
+      return createSuccessResponse(exists, "Database existence checked successfully");
+    }
+    return createErrorResponse("Failed to get database path");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to check database existence");
+  }
 };
 
 // Initialize database explicitly
-const initDb = async (_event: IpcMainInvokeEvent) => {
+const initDb = async (_event: IpcMainInvokeEvent): IpcResult<{ success: boolean; message: string }> => {
   try {
     await initializeDatabase();
-    return { success: true, message: "Database initialized successfully" };
+    return createSuccessResponse(
+      { success: true, message: "Database initialized successfully" },
+      "Database initialized successfully"
+    );
   } catch (error) {
     console.error("Failed to initialize database:", error);
-    return {
-      success: false,
-      message: `Database initialization failed: ${error}`,
-    };
+    return createErrorResponse(
+      error as Error,
+      "Database initialization failed"
+    );
   }
 };
 
 // Get latest manga with their latest chapters
-const getLatestManga = async (_event: IpcMainInvokeEvent) => {
-  const repo = await initializeDatabase();
-  return repo.getLatestManga();
+const getLatestManga = async (_event: IpcMainInvokeEvent): IpcResult<any[]> => {
+  try {
+    const repo = await initializeDatabase();
+    const rawResult = await repo.getLatestManga();
+    
+    // Transform database result to flat structure
+    const transformedResult = rawResult.map(item => ({
+      id: item.manga_id,
+      mainTitle: item.main_title,
+      statusName: item.status_name,
+      chapterID: item.chapter_id,
+      chapterNumber: item.chapter_number,
+      downloadTime: item.download_time
+    }));
+    
+    return createSuccessResponse(transformedResult, "Latest manga retrieved successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to retrieve latest manga");
+  }
 };
 
 // Then add it to the handlers list in the mangaDatabaseHandlers object

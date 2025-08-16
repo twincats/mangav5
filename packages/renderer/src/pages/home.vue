@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { mangaAPI } from "@app/preload";
+import type { LatestMangaResponse  } from "@app/preload";
 
-const latestManga = ref<any[]>([]);
+const latestManga = ref<LatestMangaResponse[]>([]);
 
 const getLatestManga = async () => {
   const result = await mangaAPI.getLatestManga();
-  latestManga.value = result;
+  if (result.success) {
+    latestManga.value = result.data || [];
+  } else {
+    console.error("Failed to get latest manga:", result.error);
+  }
 }
 getLatestManga();
 
@@ -17,9 +22,9 @@ getLatestManga();
     <div>Home</div>
     <div class="row" >
       <q-card v-for="manga in latestManga" class="my-card col-4">
-      <q-img :src="`manga://${manga.main_title}/cover.webp`">
+      <q-img :src="`manga://${manga.mainTitle}/cover.webp`">
         <div class="absolute-bottom text-subtitle2 text-center">
-          {{ manga.main_title }}
+          {{ manga.mainTitle }}
         </div>
       </q-img>
     </q-card>

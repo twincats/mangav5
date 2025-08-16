@@ -14,3 +14,5 @@ function send(channel: string, message: string) {
 // mangaAPI is now imported from ./manga.js
 
 export { sha256sum, versions, send, getClipboard, mangaAPI, getDialog, downloadAPI };
+
+export type * from './manga.js';

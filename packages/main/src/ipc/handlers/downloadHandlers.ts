@@ -1,15 +1,27 @@
-import { IpcHandler, IpcModule } from "../types.js";
+import { IpcHandler, IpcModule, IpcResult } from "../types.js";
+import { createSuccessResponse, createErrorResponse } from "../utils/errorHandler.js";
+import { InputValidator } from "../utils/validation.js";
 import { getDownloadService } from "../../modules/DownloadServiceModule.js";
 import type { DownloadOptions } from "../../types/downloadTypes.js";
 import { BrowserWindow } from "electron";
 
+// Type aliases untuk brevity
+type DownloadBatchHandler = IpcHandler<[string[], DownloadOptions?], any>;
+type CancelHandler = IpcHandler<[], boolean>;
+type StatsHandler = IpcHandler<[], any>;
+
 /**
  * Handler for sequential batch downloads
  */
-const downloadBatchSequential: IpcHandler = {
+const downloadBatchSequential: DownloadBatchHandler = {
   name: "download:batch-sequential",
-  handler: async (event, urls: string[], options?: DownloadOptions) => {
+  handler: async (event, urls: string[], options?: DownloadOptions): IpcResult<any> => {
     try {
+      // Validate input
+      if (!InputValidator.validateArrayOfStrings(urls)) {
+        return createErrorResponse("Invalid URLs array");
+      }
+
       const downloadService = getDownloadService();
       // Set the main window for progress updates
       const window = BrowserWindow.fromWebContents(event.sender);
@@ -18,29 +30,27 @@ const downloadBatchSequential: IpcHandler = {
       }
 
       const results = await downloadService.downloadBatchSequential(urls, options);
-      return {
-        success: true,
-        results,
-        message: `Downloaded ${results.filter(r => r.success).length}/${results.length} files successfully`
-      };
+      const successCount = results.filter(r => r.success).length;
+      return createSuccessResponse(results, `Downloaded ${successCount}/${results.length} files successfully`);
     } catch (error) {
-      console.error("Error in batch sequential download:", error);
-      return {
-        success: false,
-        error: (error as Error).message || "Unknown error occurred",
-        results: []
-      };
+      return createErrorResponse(error as Error, "Failed to download batch sequentially");
     }
   },
+  validateInput: (urls: string[]) => InputValidator.validateArrayOfStrings(urls)
 };
 
 /**
  * Handler for concurrent batch downloads
  */
-const downloadBatchConcurrent: IpcHandler = {
+const downloadBatchConcurrent: DownloadBatchHandler = {
   name: "download:batch-concurrent",
-  handler: async (event, urls: string[], options?: DownloadOptions) => {
+  handler: async (event, urls: string[], options?: DownloadOptions): IpcResult<any> => {
     try {
+      // Validate input
+      if (!InputValidator.validateArrayOfStrings(urls)) {
+        return createErrorResponse("Invalid URLs array");
+      }
+
       const downloadService = getDownloadService();
       // Set the main window for progress updates
       const window = BrowserWindow.fromWebContents(event.sender);
@@ -49,41 +59,27 @@ const downloadBatchConcurrent: IpcHandler = {
       }
 
       const results = await downloadService.downloadBatchConcurrent(urls, options);
-      return {
-        success: true,
-        results,
-        message: `Downloaded ${results.filter(r => r.success).length}/${results.length} files successfully`
-      };
+      const successCount = results.filter(r => r.success).length;
+      return createSuccessResponse(results, `Downloaded ${successCount}/${results.length} files successfully`);
     } catch (error) {
-      console.error("Error in batch concurrent download:", error);
-      return {
-        success: false,
-        error: (error as Error).message || "Unknown error occurred",
-        results: []
-      };
+      return createErrorResponse(error as Error, "Failed to download batch concurrently");
     }
   },
+  validateInput: (urls: string[]) => InputValidator.validateArrayOfStrings(urls)
 };
 
 /**
  * Handler to cancel all active downloads
  */
-const cancelDownloads: IpcHandler = {
+const cancelDownloads: CancelHandler = {
   name: "download:cancel-all",
-  handler: async () => {
+  handler: async (): IpcResult<boolean> => {
     try {
       const downloadService = getDownloadService();
       downloadService.cancelAllDownloads();
-      return {
-        success: true,
-        message: "All downloads cancelled successfully"
-      };
+      return createSuccessResponse(true, "All downloads cancelled successfully");
     } catch (error) {
-      console.error("Error cancelling downloads:", error);
-      return {
-        success: false,
-        error: (error as Error).message || "Unknown error occurred"
-      };
+      return createErrorResponse(error as Error, "Failed to cancel downloads");
     }
   },
 };
@@ -91,26 +87,19 @@ const cancelDownloads: IpcHandler = {
 /**
  * Handler to get download statistics
  */
-const getDownloadStats: IpcHandler = {
+const getDownloadStats: StatsHandler = {
   name: "download:get-stats",
-  handler: async () => {
+  handler: async (): IpcResult<any> => {
     try {
       const downloadService = getDownloadService();
       const stats = downloadService.getDownloadStats();
-      return {
-        success: true,
-        stats
-      };
+      return createSuccessResponse(stats, "Download statistics retrieved successfully");
     } catch (error) {
-      console.error("Error getting download stats:", error);
-      return {
-        success: false,
-        error: (error as Error).message || "Unknown error occurred",
-        stats: { activeDownloads: 0 }
-      };
+      return createErrorResponse(error as Error, "Failed to get download statistics");
     }
   },
 };
+
 
 export const downloadHandlers: IpcModule = {
   getHandlers: () => [

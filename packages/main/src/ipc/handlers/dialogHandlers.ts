@@ -1,4 +1,5 @@
-import { IpcHandler, IpcModule } from "../types.js";
+import { IpcHandler, IpcModule, IpcResult } from "../types.js";
+import { createSuccessResponse, createErrorResponse } from "../utils/errorHandler.js";
 import { dialog } from "electron";
 import type {
   OpenDialogOptions,
@@ -7,32 +8,36 @@ import type {
   SaveDialogReturnValue,
 } from "electron";
 
-const showOpenDialog: IpcHandler = {
+// Type aliases untuk brevity
+type OpenDialogHandler = IpcHandler<[OpenDialogOptions], OpenDialogReturnValue>;
+type SaveDialogHandler = IpcHandler<[SaveDialogOptions], SaveDialogReturnValue>;
+
+const showOpenDialog: OpenDialogHandler = {
   name: "dialog:showOpen",
   handler: async (
     _event,
     options: OpenDialogOptions
-  ): Promise<OpenDialogReturnValue> => {
+  ): IpcResult<OpenDialogReturnValue> => {
     try {
-      return await dialog.showOpenDialog(options);
+      const result = await dialog.showOpenDialog(options);
+      return createSuccessResponse(result, "Open dialog shown successfully");
     } catch (error) {
-      console.error("Error showing open dialog:", error);
-      throw error;
+      return createErrorResponse(error as Error, "Failed to show open dialog");
     }
   },
 };
 
-const showSaveDialog: IpcHandler = {
+const showSaveDialog: SaveDialogHandler = {
   name: "dialog:showSave",
   handler: async (
     _event,
     options: SaveDialogOptions
-  ): Promise<SaveDialogReturnValue> => {
+  ): IpcResult<SaveDialogReturnValue> => {
     try {
-      return await dialog.showSaveDialog(options);
+      const result = await dialog.showSaveDialog(options);
+      return createSuccessResponse(result, "Save dialog shown successfully");
     } catch (error) {
-      console.error("Error showing save dialog:", error);
-      throw error;
+      return createErrorResponse(error as Error, "Failed to show save dialog");
     }
   },
 };
