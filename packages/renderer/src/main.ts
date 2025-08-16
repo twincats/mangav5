@@ -6,6 +6,7 @@ import Router from './router/route.ts'
 import '@quasar/extras/material-icons/material-icons.css'
 // Import Quasar css
 import 'quasar/src/css/index.sass'
+import 'virtual:uno.css'
 
 
 const myApp = createApp(App)
