@@ -639,6 +639,95 @@ export class MangaRepository extends BaseRepository {
     );
   }
 
+  /**
+   * Get manga with all its chapters and alternative titles
+   * @param mangaId - ID manga yang akan diambil
+   * @returns Manga dengan chapter dan alternative titles
+   */
+  async getMangaWithChapters(mangaId: number) {
+    this.logOperation('getMangaWithChapters', `Manga ID: ${mangaId}`);
+    this.validateRequired({ mangaId }, ['mangaId']);
+    
+    return this.safeExecute(
+      async () => {
+        // Get manga details
+        const mangaResult = await this.db
+          .select({
+            mangaId: schema.manga.mangaId,
+            mainTitle: schema.manga.mainTitle,
+            description: schema.manga.description,
+            year: schema.manga.year,
+            statusId: schema.manga.statusId,
+            createdAt: schema.manga.createdAt,
+            updatedAt: schema.manga.updatedAt
+          })
+          .from(schema.manga)
+          .where(eq(schema.manga.mangaId, mangaId))
+          .all();
+
+        if (mangaResult.length === 0) {
+          return null;
+        }
+
+        const manga = mangaResult[0];
+
+        // Get chapters for this manga
+        const chapters = await this.db
+          .select({
+            chapterId: schema.chapters.chapterId,
+            chapterNumber: schema.chapters.chapterNumber,
+            chapterTitle: schema.chapters.chapterTitle,
+            volume: schema.chapters.volume,
+            translatorGroup: schema.chapters.translatorGroup,
+            releaseTime: schema.chapters.releaseTime,
+            language: schema.chapters.language,
+            statusRead: schema.chapters.statusRead,
+            createdAt: schema.chapters.createdAt
+          })
+          .from(schema.chapters)
+          .where(eq(schema.chapters.mangaId, mangaId))
+          .orderBy(schema.chapters.chapterNumber)
+          .all();
+
+        // Get alternative titles
+        const alternativeTitles = await this.db
+          .select({
+            altId: schema.alternativeTitles.altId,
+            alternativeTitle: schema.alternativeTitles.alternativeTitle
+          })
+          .from(schema.alternativeTitles)
+          .where(eq(schema.alternativeTitles.mangaId, mangaId))
+          .all();
+
+        // Get manga status
+        let status = null;
+        if (manga.statusId) {
+          const statusResult = await this.db
+            .select({
+              statusId: schema.mangaStatus.statusId,
+              statusName: schema.mangaStatus.statusName
+            })
+            .from(schema.mangaStatus)
+            .where(eq(schema.mangaStatus.statusId, manga.statusId))
+            .all();
+
+          status = statusResult.length > 0 ? statusResult[0] : null;
+        }
+
+        return {
+          manga: {
+            ...manga,
+            status
+          },
+          chapters,
+          alternativeTitles,
+          totalChapters: chapters.length
+        };
+      },
+      'getMangaWithChapters'
+    );
+  }
+
   // Close the database connection (legacy method - not needed with DatabaseManager)
   close() {
     console.warn('close() method is deprecated. Use DatabaseManager.getInstance().close() instead.');

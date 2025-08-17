@@ -62,6 +62,22 @@ export interface IpcResponse<T = any> {
   message?: string;
 }
 
+// Manga with chapters response interface
+export interface MangaWithChaptersResponse {
+  manga: MangaResponse & { 
+    status: { 
+      statusId: number; 
+      statusName: string; 
+    } | null; 
+  };
+  chapters: ChapterResponse[];
+  alternativeTitles: { 
+    altId: number; 
+    alternativeTitle: string; 
+  }[];
+  totalChapters: number;
+}
+
 // Response data types yang lebih spesifik
 export interface MangaResponse extends MangaData {
   id: number;
@@ -185,6 +201,11 @@ export const mangaAPI = {
   getMangaById: (id: number) => withValidation(
     [() => validateId(id, "manga")],
     () => createIpcCall<MangaResponse>("manga:getById", id)
+  ),
+
+  getMangaWithChapters: (id: number) => withValidation(
+    [() => validateId(id, "manga")],
+    () => createIpcCall<MangaWithChaptersResponse>("manga:getWithChapters", id)
   ),
 
   searchManga: (title: string) => withValidation(
@@ -375,5 +396,11 @@ export const mangaAPI = {
   scanDirectoryAndImport: (directoryPath: string) => withValidation(
     [() => validateString(directoryPath, "Directory path")],
     () => createIpcCall<{ scanResult: DirectoryScanResult; importResult: BatchInsertResult }>("manga:scanDirectoryAndImport", directoryPath.trim())
+  ),
+
+  // Chapter image operations
+  getChapterImageList: (chapterId: number) => withValidation(
+    [() => validateId(chapterId, "chapter")],
+    () => createIpcCall<string[]>("manga:getChapterImageList", chapterId)
   ),
 };

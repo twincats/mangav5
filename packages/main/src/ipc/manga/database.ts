@@ -12,6 +12,7 @@ import {
 } from "../../schema/mangaRepository.js";
 import { DatabaseManager } from "../../schema/database.js";
 import { DirectoryScanner, DirectoryScanResult } from "../../services/directoryScanner.js";
+import { getImageList } from "../../services/mangaProtocolService.js";
 import { join } from "path";
 import fs from "node:fs";
 
@@ -555,12 +556,60 @@ const getLatestManga = async (_event: IpcMainInvokeEvent): IpcResult<any[]> => {
   }
 };
 
+/**
+ * Get manga with all its chapters and alternative titles
+ * @param _event - IPC event
+ * @param mangaId - ID manga yang akan diambil
+ * @returns Manga dengan chapter dan alternative titles
+ */
+const getMangaWithChapters = async (_event: IpcMainInvokeEvent, mangaId: number): IpcResult<any> => {
+  try {
+    const repo = await initializeDatabase();
+    const result = await repo.getMangaWithChapters(mangaId);
+    
+    if (!result) {
+      return createErrorResponse("Manga not found");
+    }
+    
+    return createSuccessResponse(result, "Manga with chapters retrieved successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to retrieve manga with chapters");
+  }
+};
+
+const getChapterImageList = async (_event: IpcMainInvokeEvent, chapterId: number): IpcResult<any> => {
+  try {
+    const repo = await initializeDatabase();
+    const chapter = await repo.getChapterById(chapterId);
+    if (chapter.length === 0) {
+      return createErrorResponse("Chapter not found");
+    }
+    if (chapter[0].mangaId === null) {
+      return createErrorResponse("Chapter not found");
+    }
+    const manga = await repo.getMangaById(chapter[0].mangaId);
+    if (manga.length === 0) {
+      return createErrorResponse("Manga not found");
+    }
+    if (manga[0].mainTitle === null) {
+      return createErrorResponse("Manga not found");
+    }
+    const chapterPath = `${manga[0].mainTitle}/${chapter[0].chapterNumber}`;
+
+    const result = await getImageList(chapterPath);
+    return createSuccessResponse(result, "Chapter image list retrieved successfully");
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to retrieve chapter image list");
+  }
+};
+
 // Then add it to the handlers list in the mangaDatabaseHandlers object
 export const mangaDatabaseHandlers: IpcModule = {
   getHandlers: () => [
     // Manga handlers
     { name: "manga:getAll", handler: getAllManga },
     { name: "manga:getById", handler: getMangaById },
+    { name: "manga:getWithChapters", handler: getMangaWithChapters },
     { name: "manga:search", handler: searchMangaByTitle },
     { name: "manga:create", handler: createManga },
     { name: "manga:batchInsert", handler: batchInsertManga },
@@ -569,6 +618,7 @@ export const mangaDatabaseHandlers: IpcModule = {
     { name: "manga:update", handler: updateManga },
     { name: "manga:delete", handler: deleteManga },
     { name: "manga:latest", handler: getLatestManga },
+    { name: "manga:getChapterImageList", handler: getChapterImageList },
 
     // Alternative titles handlers
     { name: "manga:getAlternativeTitles", handler: getAlternativeTitles },
