@@ -1,318 +1,280 @@
 
-> [!Important]
-> This project is maintained by developer from Ukraine 🇺🇦
-> 
-> I do my best, but due to Russia's ongoing full-scale invasion of Ukraine, I barely have the energy to support open source projects.
->
-> If my work has been useful to you, please consider [supporting Ukraine](https://stand-with-ukraine.pp.ua/) or [me personally](https://send.monobank.ua/6SmojkkR9i). Even your **$1** has an impact!
+# Manga Reader v5 - Electron Application
 
-![IMG_0875](https://github.com/user-attachments/assets/590de304-e2c4-4935-9814-c18ade52fd8e)
+![GitHub last commit](https://img.shields.io/github/last-commit/user/mangav5-electron?label=last%20update)
+![GitHub package.json dev/peer/optional dependency version](https://img.shields.io/github/package-json/dependency-version/user/mangav5-electron/dev/electron) 
+![GitHub package.json dev/peer/optional dependency version](https://img.shields.io/github/package-json/dependency-version/user/mangav5-electron/dev/electron-builder)
+![GitHub package.json dev/peer/optional dependency version](https://img.shields.io/github/package-json/dependency-version/user/mangav5-electron/dev/vite?filename=packages%2Fmain%2Fpackage.json)
 
+A modern, feature-rich manga reader desktop application built with Electron, Vue.js, and SQLite. Read, organize, and manage your manga collection with an intuitive interface and powerful features.
 
-# Vite Electron Builder Boilerplate
+## ✨ Features
 
-![GitHub last commit](https://img.shields.io/github/last-commit/cawa-93/vite-electron-builder?label=last%20update)
-![GitHub package.json dev/peer/optional dependency version](https://img.shields.io/github/package-json/dependency-version/cawa-93/vite-electron-builder/dev/electron) 
-![GitHub package.json dev/peer/optional dependency version](https://img.shields.io/github/package-json/dependency-version/cawa-93/vite-electron-builder/dev/electron-builder)
-![GitHub package.json dev/peer/optional dependency version](https://img.shields.io/github/package-json/dependency-version/cawa-93/vite-electron-builder/dev/vite?filename=packages%2Fmain%2Fpackage.json)
-![GitHub package.json dev/peer/optional dependency version](https://img.shields.io/github/package-json/dependency-version/cawa-93/vite-electron-builder/dev/playwright)
+### 📚 Manga Management
+- **Local Manga Library**: Organize and manage your manga collection locally
+- **Chapter Tracking**: Keep track of read/unread chapters
+- **Alternative Titles**: Support for multiple language titles
+- **Status Management**: Track manga completion status (Ongoing, Completed, Hiatus, etc.)
 
-This is a template for secure electron applications. Written following the latest safety requirements, recommendations
-and best practices.
+### 🔍 Smart Search & Organization
+- **Title Search**: Find manga quickly with intelligent search
+- **Batch Operations**: Import multiple manga and chapters at once
+- **Directory Scanning**: Automatically scan folders for manga content
+- **Metadata Management**: Store descriptions, years, and translator information
 
-## Get started
+### 📖 Reading Experience
+- **Chapter Reader**: Built-in chapter viewer with navigation
+- **Reading Progress**: Track which chapters you've read
+- **Volume Support**: Organize chapters by volume numbers
+- **Language Support**: Multiple language chapter support
 
-Follow these steps to get started with the template:
+### 🛠️ Technical Features
+- **Cross-Platform**: Works on Windows, macOS, and Linux
+- **Offline First**: All data stored locally in SQLite database
+- **Fast Performance**: Optimized database queries and efficient data handling
+- **Auto-Updates**: Automatic application updates
+- **Secure Architecture**: Built following Electron security best practices
 
-1. Click the **[Use this template](https://github.com/cawa-93/vite-electron-builder/generate)** button (you must be logged in) or just clone this repo.
-2. Go to project folder and run `npm run init`.
-3. Start application in development mode by `npm start`.
-4. Compile executable by `npm run compile`.
- 
-That's all you need. 😉
+## 🚀 Getting Started
 
-> [!TIP]
-> You can explore the demo application for various frameworks and operating systems in the [Deployment](https://github.com/cawa-93/vite-electron-builder/deployments) section.
-> This will allow you to see how the application performs across different environments.
-> Additionally, you can verify the auto-update functionality by installing an outdated version of the application.
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn package manager
 
-❤️ **If you like this template, give a ⭐ or [send support](https://www.buymeacoffee.com/kozack/)!**
+### Installation
 
-## Features
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/user/mangav5-electron.git
+   cd mangav5-electron
+   ```
 
-### Lightweight
-When designing this template, I tried to keep it minimal, using the platform's native features to the maximum and minimizing the number of third-party dependencies.
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-### Electron
+3. **Initialize the application**
+   ```bash
+   npm run init
+   ```
 
-- This template uses the latest electron version with all the latest security patches.
-- The architecture of the application is built according to the security [guides](https://www.electronjs.org/docs/tutorial/security) and best practices.
-- The latest version of the [electron-builder] is used to package the application.
+4. **Start development mode**
+   ```bash
+   npm start
+   ```
 
-### Automatic tests
+5. **Build executable**
+   ```bash
+   npm run compile
+   ```
 
-- End-to-end are placed in the root [`tests`](tests) directory and use [playwright].
-- You may write any unit tests inside each package and use whatever you ~~want~~ need.
+## 🏗️ Project Architecture
 
-### Continuous Integration
+This project is built as a monorepo with the following structure:
 
-- The configured workflow will check the types for each push and PR.
-- Code signing supported. See [code-signing documentation](https://www.electron.build/code-signing.html).
+### Core Packages
 
-### Auto-update
+- **`packages/main`** - Electron main process with manga management logic
+  - Database operations (SQLite with Drizzle ORM)
+  - Manga repository and business logic
+  - IPC handlers for renderer communication
+  - Security modules and window management
 
-Each time you push changes to the `main` branch,
-the [`ci`](.github/workflows/ci.yml) workflow starts to create and deploy a new application version with then will be downloaded and applied by each app instance.
+- **`packages/renderer`** - Vue.js frontend application
+  - Modern UI components with Quasar framework
+  - Manga library management interface
+  - Chapter reader and navigation
+  - Search and filtering capabilities
 
-## Project Structure
+- **`packages/preload`** - Secure bridge between main and renderer
+  - Exposes safe APIs to renderer
+  - File system operations
+  - Database access methods
 
-The project is designed as monorepo where each part of the application is an independent package.
-Each package could have own tech stack, tests, dependencies, frameworks, etc.
-All internal names are prefixed by `@app/*`.
-There are no technical reasons for this.
-It's just for you to make it easier to understand the architecture.
+### Database Schema
 
-Initially, the repository contains only a few packages.4
+The application uses SQLite with the following main tables:
 
-### Packages with building tools:
+- **`Manga`** - Core manga information (title, description, year, status)
+- **`Chapters`** - Chapter details (number, title, volume, read status)
+- **`AlternativeTitles`** - Multiple language titles
+- **`MangaStatus`** - Status definitions (Ongoing, Completed, etc.)
+- **`ScrapingRules`** - Website scraping configurations
+- **`Config`** - Application configuration storage
 
-- [`packages/integrate-renderer`](packages/integrate-renderer) - A helper package that is not included in the runtime.
-  It is used in `npm run init` to configure a new interface package.
-- [`packages/electron-versions`](packages/electron-versions) - A set of helper functions to get the versions of internal components bundled within Electron.
+## 🎯 Key Components
 
-### Packages with app logic:
+### MangaRepository
+Central class for all manga-related database operations:
 
-- [`packages/main`](packages/main) - Implementation of Electron's [**main script**](https://www.electronjs.org/docs/tutorial/quick-start#create-the-main-script-file).
-- [`packages/preload`](packages/preload) - Implementation of Electron's [**preload scripts**](https://www.electronjs.org/docs/latest/tutorial/tutorial-preload).
+```typescript
+// Get all manga
+const allManga = await mangaRepo.getAllManga();
 
-### Renderer is not included
+// Search by title
+const results = await mangaRepo.searchMangaByTitle("One Piece");
 
-As you may have noticed, the repository does **not** contain a package that implements the application interface.
-The reason is that since the entire application is a mono-repository,
-you can use any web application based on any framework or bundler as a package for the interface.
+// Create new manga with chapters
+const mangaId = await mangaRepo.createManga({
+  mainTitle: "One Piece",
+  description: "Epic pirate adventure",
+  year: 1997,
+  alternativeTitles: ["ワンピース"]
+});
 
-There is only one requirement: the template expects to import renderer by `@app/renderer` name.
-
-> [!TIP]
-> You can create new renderer package in interactive mode by `npm run init`.
-
-> [!NOTE]
-> If you are using a bundler other than vite,
-> you may need to slightly change the [dev-mode.js](packages/dev-mode.js) script to run it correctly.
-
-## How It works
-
-### Compile executable
-
-When an application is ready to distribute, you need to compile it into executable.
-We are using [electron-builder] for
-this.
-
-- You can compile application locally by `npm run compile`.
-  In this case, you will get executable that you cat share, but it will not support auto-updates out-of-box.
-- To have auto-updater, you should compile an application and publish it to one or more supported sources for distribution. In this case, all application instances will download and apply all new updates. This is done by GitHub action in [release.yml](.github/workflows/release.yml).
-
-> [!TIP]
-> This template is configured to use GitHub Releases to distribute updates, but you can configure whatever you need.
-> Find more in [electron-builder docs](https://www.electron.build/configuration/publish).
-
-
-### Working with third-party dependencies
-
-Because the `renderer` works and builds like a _regular web application_, you can only use dependencies that support the
-browser or compile to a browser-friendly format.
-
-This means that in the `renderer` you are free to use any frontend dependencies such as Vue, React, lodash, axios and so
-on. However, you _CANNOT_ use any native Node.js APIs, such as, `systeminformation`. These APIs are _only_ available in
-a Node.js runtime environment and will cause your application to crash if used in the `renderer` layer. Instead, if you
-need access to Node.js runtime APIs in your frontend, export a function form the `preload` package.
-
-All dependencies that require Node.js api can be used in
-the [`preload` script](https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts).
-
-#### Expose in the main world
-
-Here is an example. Let's say you need to read some data from the file system or database in the renderer.
-
-In the preload context, create a function that reads and returns data. To make the function announced in the preload
-available in the render, you usually need to call
-the [`electron.contextBridge.exposeInMainWorld`](https://www.electronjs.org/ru/docs/latest/api/context-bridge).
-
-However, this template is designed to use all power of ES modules.
-You can import anything from `preload` in `renderer`.
-All the data will quietly throw through the `electron.contextBridge.exposeInMainWorld()`,
-so you don't need to worry about it.
-
-```ts
-// preload/src/index.ts
-import {readFile} from 'node:fs/promises';
-
-// Encapsulate types if you use typescript
-interface UserData {
-  prop: string
-}
-
-// Will call `electron.contextBridge.exposeInMainWorld('getUserData', getUserData)`
-export function getUserData(): Promise<UserData> {
-  return readFile('/path/to/file/in/user/filesystem.json', {encoding: 'utf8'}).then(JSON.parse);
-}
+// Batch insert multiple manga
+const result = await mangaRepo.batchInsertManga(mangaList);
 ```
 
-Now you can import and call the method in renderer
+### Database Management
+- **Drizzle ORM**: Type-safe database operations
+- **Transaction Support**: ACID compliance for data integrity
+- **Migration System**: Easy database schema updates
+- **Connection Pooling**: Efficient database resource management
 
-```ts
-// renderer/src/anywere/component.ts
-import {getUserData} from '@app/preload'
+### Security Features
+- **Context Isolation**: Secure communication between processes
+- **Input Validation**: Comprehensive data validation
+- **Error Handling**: Graceful error management and logging
+- **Rate Limiting**: Protection against abuse
 
-// Method will came from exposed context
-// const userData = globalThis['getUserData']
-const userData = await getUserData()
+## 📱 Usage Examples
+
+### Adding New Manga
+```typescript
+// Create manga with chapters
+const mangaData = {
+  mainTitle: "Dragon Ball",
+  description: "Martial arts adventure",
+  year: 1984,
+  chapters: [
+    { chapterNumber: 1, chapterTitle: "Bulma and Son Goku" },
+    { chapterNumber: 2, chapterTitle: "The Dragon Balls" }
+  ]
+};
+
+const mangaId = await mangaRepo.createManga(mangaData);
 ```
 
-> [!TIP]
-> Find more
-> in [Context Isolation tutorial](https://www.electronjs.org/docs/tutorial/context-isolation#security-considerations).
+### Managing Reading Progress
+```typescript
+// Mark chapter as read
+await mangaRepo.markChapterAsRead(chapterId);
 
-### Working with Electron API
+// Get unread chapters
+const unreadChapters = await mangaRepo.getChaptersByReadStatus(mangaId, false);
 
-Although the preload has access to all of Node.js API, it **still runs in the BrowserWindow context**, so only limited
-electron modules are available in it.
-
-> [!TIP]
-> Check the [electron docs](https://www.electronjs.org/ru/docs/latest/api/clipboard) for the full list of available
-> methods.
-
-All other electron methods can be invoked in the `main`.
-
-As a result, the architecture of interaction between all modules is as follows:
-
-```mermaid
-sequenceDiagram
-renderer->>+preload: Read data from file system
-preload->>-renderer: Data
-renderer->>preload: Maximize window
-activate preload
-preload-->>main: Invoke IPC command
-activate main
-main-->>preload: IPC response
-deactivate main
-preload->>renderer: Window maximized
-deactivate preload
+// Update chapter status
+await mangaRepo.updateChapterReadStatus(chapterId, true);
 ```
 
-> [!TIP]
-> Find more in [Inter-Process Communication tutorial](https://www.electronjs.org/docs/latest/tutorial/ipc).
+### Batch Operations
+```typescript
+// Import multiple manga at once
+const batchResult = await mangaRepo.batchInsertManga([
+  { mainTitle: "Manga 1", chapters: [...] },
+  { mainTitle: "Manga 2", chapters: [...] }
+]);
 
-### Modes and Environment Variables
-
-All environment variables are set as part of the `import.meta`, so you can access them vie the following
-way: `import.meta.env`.
-
-> [!NOTE]
-> If you are using TypeScript and want to get code completion,
-> you must add all the environment variables to the [`ImportMetaEnv` in `types/env.d.ts`](types/env.d.ts).
-
-The mode option is used to specify the value of `import.meta.env.MODE` and the corresponding environment variables files
-that need to be loaded.
-
-By default, there are two modes:
-
-- `production` is used by default
-- `development` is used by `npm start` script
-
-When running the build script, the environment variables are loaded from the following files in your project root:
-
-```
-.env                # loaded in all cases
-.env.local          # loaded in all cases, ignored by git
-.env.[mode]         # only loaded in specified env mode
-.env.[mode].local   # only loaded in specified env mode, ignored by git
+console.log(`Inserted ${batchResult.insertedManga} manga and ${batchResult.insertedChapters} chapters`);
 ```
 
-> [!WARNING]
-> To prevent accidentally leaking env variables to the client, only variables prefixed with `VITE_` are exposed to your
-> Vite-processed code.
+## 🛠️ Development
 
-For example, let's take the following `.env` file:
+### Available Scripts
 
+```bash
+npm start          # Start development mode with hot-reload
+npm run build      # Build all packages
+npm run compile    # Build and create executable
+npm run test       # Run end-to-end tests
+npm run typecheck  # Type checking across all packages
 ```
-DB_PASSWORD=foobar
-VITE_SOME_KEY=123
+
+### Development Workflow
+
+1. **Main Process Changes**: Edit files in `packages/main/src/`
+2. **Frontend Changes**: Modify Vue components in `packages/renderer/src/`
+3. **API Changes**: Update preload scripts in `packages/preload/src/`
+4. **Database Changes**: Modify schema files in `packages/main/src/schema/`
+
+### Testing
+- **E2E Tests**: Playwright-based end-to-end testing
+- **Unit Tests**: Individual package testing
+- **Integration Tests**: Database and API testing
+
+## 🔧 Configuration
+
+### Environment Variables
+Create `.env` files in the project root:
+
+```bash
+# .env
+VITE_APP_NAME=Manga Reader v5
+VITE_DATABASE_PATH=./manga.db
+
+# .env.development
+VITE_DEBUG_MODE=true
+VITE_LOG_LEVEL=debug
 ```
 
-Only `VITE_SOME_KEY` will be exposed as `import.meta.env.VITE_SOME_KEY` to your client source code, but `DB_PASSWORD`
-will not.
+### Database Configuration
+Database settings can be configured in `packages/main/src/schema/database.ts`:
 
-> [!TIP]
-> You can change that prefix or add another. See [`envPrefix`](https://vitejs.dev/config/shared-options.html#envprefix).
-
-### NPM Scripts
-
-```sh
-npm start
+```typescript
+export const databaseConfig = {
+  path: process.env.VITE_DATABASE_PATH || './manga.db',
+  verbose: process.env.NODE_ENV === 'development'
+};
 ```
-Start application in development more with hot-reload.
 
----
-```sh
-npm run build
-```
-Runs the `build` command in all workspaces if present.
+## 📦 Building & Distribution
 
----
-```sh
+### Local Build
+```bash
 npm run compile
 ```
-First runs the `build` script,
-then compiles the project into executable using `electron-builder` with the specified configuration.
+
+### Production Build
+```bash
+npm run build
+npm run compile -- --publish=always
+```
+
+### Supported Platforms
+- **Windows**: `.exe` installer and portable versions
+- **macOS**: `.dmg` and `.pkg` packages
+- **Linux**: `.AppImage`, `.deb`, and `.rpm` packages
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Setup
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Built with [Electron](https://electronjs.org/) for cross-platform desktop apps
+- Frontend powered by [Vue.js](https://vuejs.org/) and [Quasar](https://quasar.dev/)
+- Database operations with [Drizzle ORM](https://orm.drizzle.team/)
+- Build system using [Vite](https://vitejs.dev/)
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/user/mangav5-electron/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/user/mangav5-electron/discussions)
+- **Wiki**: [Project Wiki](https://github.com/user/mangav5-electron/wiki)
 
 ---
-```sh
-npm run compile -- --dir -c.asar=false
-```
-Same as `npm run compile` but pass to `electron-builder` additional parameters to disable asar archive and installer
-creating.
-Useful for debugging compiled application.
 
----
-```sh
-npm run test
-```
-Executes end-to-end tests on **compiled app** using Playwright.
-
----
-```sh
-npm run typecheck
-```
-Runs the `typecheck` command in all workspaces if present.
-
----
-```sh
-npm run create-renderer
-```
-Initializes a new Vite project named `renderer`. Basically same as `npm create vite`.
-
----
-```sh
-npm run integrate-renderer
-```
-Starts the integration process of the renderer using the Vite Electron builder.
-
----
-```sh
-npm run init
-```
-Set up the initial environment by creating a new renderer, integrating it, and installing the necessary packages.
-
-## Contribution
-
-See [Contributing Guide](CONTRIBUTING.md).
-
-
-[vite]: https://github.com/vitejs/vite/
-
-[electron]: https://github.com/electron/electron
-
-[electron-builder]: https://github.com/electron-userland/electron-builder
-
-[playwright]: https://playwright.dev
+**Happy Reading! 📚✨**
