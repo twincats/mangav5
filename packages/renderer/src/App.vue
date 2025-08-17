@@ -69,6 +69,7 @@ function alert() {
 
 const isDbExist = ref(false);
 onMounted(async () => {
-  isDbExist.value = await mangaAPI.checkDatabaseExist();
+  const response = await mangaAPI.checkDatabaseExist();
+  isDbExist.value = response.success && response.data === true;
 });
 </script>

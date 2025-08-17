@@ -36,15 +36,19 @@ const setupDatabase = async () => {
     // Scan directory and auto-import
     const result = await mangaAPI.scanDirectoryAndImport(mangaDirectory.value);
     
-    scanResult.value = result.scanResult;
-    importResult.value = result.importResult;
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Failed to scan directory');
+    }
+    
+    scanResult.value = result.data.scanResult;
+    importResult.value = result.data.importResult;
     
     // Show success message
     const message = `✅ Database setup complete!\n\n` +
       `📁 Directory: ${mangaDirectory.value}\n` +
-      `📚 Manga found: ${result.scanResult.totalManga}\n` +
-      `📖 Chapters found: ${result.scanResult.totalChapters}\n` +
-      `💾 Imported: ${result.importResult.insertedManga} manga, ${result.importResult.insertedChapters} chapters`;
+      `📚 Manga found: ${result.data.scanResult.totalManga}\n` +
+      `📖 Chapters found: ${result.data.scanResult.totalChapters}\n` +
+      `💾 Imported: ${result.data.importResult.insertedManga} manga, ${result.data.importResult.insertedChapters} chapters`;
     
     alert(message);
     
