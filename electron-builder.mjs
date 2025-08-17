@@ -22,6 +22,17 @@ export default /** @type import('electron-builder').Configuration */
     'LICENSE*',
     pkg.main,
     '!node_modules/@app/**',
+    // Exclude icon sets yang tidak digunakan
+    '!node_modules/@quasar/extras/mdi*/**',
+    '!node_modules/@quasar/extras/fontawesome*/**',
+    '!node_modules/@quasar/extras/ionicons*/**',
+    '!node_modules/@quasar/extras/bootstrap-icons/**',
+    '!node_modules/@quasar/extras/eva-icons/**',
+    '!node_modules/@quasar/extras/themify/**',
+    '!node_modules/@quasar/extras/roboto-font*/**',
+    '!node_modules/@quasar/extras/animate/**',
+    // Hanya include Material Icons
+    'node_modules/@quasar/extras/material-icons*/**',
     ...await getListOfFilesFromEachWorkspace(),
   ],
 });
