@@ -1,10 +1,10 @@
 
 # Manga Reader v5 - Electron Application
 
-![GitHub last commit](https://img.shields.io/github/last-commit/user/mangav5-electron?label=last%20update)
-![GitHub package.json dev/peer/optional dependency version](https://img.shields.io/github/package-json/dependency-version/user/mangav5-electron/dev/electron) 
-![GitHub package.json dev/peer/optional dependency version](https://img.shields.io/github/package-json/dependency-version/user/mangav5-electron/dev/electron-builder)
-![GitHub package.json dev/peer/optional dependency version](https://img.shields.io/github/package-json/dependency-version/user/mangav5-electron/dev/vite?filename=packages%2Fmain%2Fpackage.json)
+![GitHub last commit](https://img.shields.io/github/last-commit/twincats/mangav5?label=last%20update)
+![GitHub package.json dev/peer/optional dependency version](https://img.shields.io/github/package-json/dependency-version/twincats/mangav5/dev/electron) 
+![GitHub package.json dev/peer/optional dependency version](https://img.shields.io/github/package-json/dependency-version/twincats/mangav5/dev/electron-builder)
+![GitHub package.json dev/peer/optional dependency version](https://img.shields.io/github/package-json/dependency-version/twincats/mangav5/dev/vite?filename=packages%2Fmain%2Fpackage.json)
 
 A modern, feature-rich manga reader desktop application built with Electron, Vue.js, and SQLite. Read, organize, and manage your manga collection with an intuitive interface and powerful features.
 
@@ -45,8 +45,8 @@ A modern, feature-rich manga reader desktop application built with Electron, Vue
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/user/mangav5-electron.git
-   cd mangav5-electron
+   git clone https://github.com/twincats/mangav5.git
+   cd mangav5
    ```
 
 2. **Install dependencies**
@@ -271,9 +271,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/user/mangav5-electron/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/user/mangav5-electron/discussions)
-- **Wiki**: [Project Wiki](https://github.com/user/mangav5-electron/wiki)
+- **Issues**: [GitHub Issues](https://github.com/twincats/mangav5/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/twincats/mangav5/discussions)
+- **Wiki**: [Project Wiki](https://github.com/twincats/mangav5/wiki)
 
 ---
 
