@@ -73,7 +73,7 @@ export class MangaRepository extends BaseRepository {
       () => this.db
         .select()
         .from(schema.manga)
-        .where(eq(schema.manga.mangaId, id)),
+        .where(eq(schema.manga.mangaId, id)).get(),
       'getMangaById'
     );
   }
@@ -238,7 +238,7 @@ export class MangaRepository extends BaseRepository {
       () => this.db
         .select()
         .from(schema.chapters)
-        .where(eq(schema.chapters.chapterId, chapterId)),
+        .where(eq(schema.chapters.chapterId, chapterId)).get(),
       'getChapterById'
     );
   }
@@ -669,10 +669,14 @@ export class MangaRepository extends BaseRepository {
           return null;
         }
 
-        const manga = mangaResult[0];
+        // map id for mangaId
+        const manga = mangaResult.map((item) => ({
+          ...item,
+          id: item.mangaId
+        }))[0];
 
         // Get chapters for this manga
-        const chapters = await this.db
+        const chaptersRaw = await this.db
           .select({
             chapterId: schema.chapters.chapterId,
             chapterNumber: schema.chapters.chapterNumber,
@@ -688,6 +692,11 @@ export class MangaRepository extends BaseRepository {
           .where(eq(schema.chapters.mangaId, mangaId))
           .orderBy(schema.chapters.chapterNumber)
           .all();
+
+        const chapters = chaptersRaw.map((item) => ({
+          ...item,
+          id: item.chapterId
+        }));
 
         // Get alternative titles
         const alternativeTitles = await this.db

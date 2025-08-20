@@ -570,6 +570,9 @@ const getMangaWithChapters = async (_event: IpcMainInvokeEvent, mangaId: number)
     if (!result) {
       return createErrorResponse("Manga not found");
     }
+
+    //
+    
     
     return createSuccessResponse(result, "Manga with chapters retrieved successfully");
   } catch (error) {
@@ -581,20 +584,20 @@ const getChapterImageList = async (_event: IpcMainInvokeEvent, chapterId: number
   try {
     const repo = await initializeDatabase();
     const chapter = await repo.getChapterById(chapterId);
-    if (chapter.length === 0) {
+    if (!chapter) {
       return createErrorResponse("Chapter not found");
     }
-    if (chapter[0].mangaId === null) {
+    if (chapter.mangaId === null) {
       return createErrorResponse("Chapter not found");
     }
-    const manga = await repo.getMangaById(chapter[0].mangaId);
-    if (manga.length === 0) {
+    const manga = await repo.getMangaById(chapter.mangaId);
+    if (!manga) {
       return createErrorResponse("Manga not found");
     }
-    if (manga[0].mainTitle === null) {
+    if (manga.mainTitle === null) {
       return createErrorResponse("Manga not found");
     }
-    const chapterPath = `${manga[0].mainTitle}/${chapter[0].chapterNumber}`;
+    const chapterPath = `${manga.mainTitle}/${chapter.chapterNumber}`;
 
     const result = await getImageList(chapterPath);
     return createSuccessResponse(result, "Chapter image list retrieved successfully");

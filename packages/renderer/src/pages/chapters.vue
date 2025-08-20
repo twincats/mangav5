@@ -24,6 +24,7 @@ const getMangaWithChapters = async (id: number) => {
     const result = await mangaAPI.getMangaWithChapters(id);
     if (result.success && result.data) {
       mangaData.value = result.data;
+      console.log(JSON.stringify(mangaData.value.manga.id));
     } else {
       error.value = result.error || 'Failed to fetch manga data';
     }
