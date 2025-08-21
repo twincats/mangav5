@@ -213,7 +213,7 @@ const toggleFullScreen = () => {
             <!-- Two Page Mode (Right to Left) -->
             <template v-else>
                 <!-- Group images into pairs for two-page layout -->
-                <div v-for="(pair, pairIndex) in Math.ceil(chapterImageList.length / 2)" :key="pairIndex" class="page-pair">
+                <div v-for="(_, pairIndex) in Math.ceil(chapterImageList.length / 2)" :key="pairIndex" class="page-pair">
                     <!-- LTR Mode: Left page first, then right page -->
                     <template v-if="readingDirection === 'ltr'">
                         <!-- Left page (even index) -->
