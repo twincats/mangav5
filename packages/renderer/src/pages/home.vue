@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { mangaAPI } from "@app/preload";
+import { mangaAPI, send } from "@app/preload";
 import type { LatestMangaResponse  } from "@app/preload";
 import { useRouter } from "vue-router";
 
@@ -51,6 +51,7 @@ const clickManga = (mangaId:number)=>{
  * TODO: Implementasi navigasi ke halaman baca chapter
  */
 const clickChapter = (chapterId:number)=>{
+  send("window:maximize", "");
  router.push(`/read/${chapterId}`);
 }
 

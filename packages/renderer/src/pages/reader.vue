@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed, useTemplateRef } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { mangaAPI } from "@app/preload";
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
+import { mangaAPI, send } from "@app/preload";
 
 const route = useRoute();
 const router = useRouter();
@@ -138,6 +138,13 @@ const toggleFullScreen = () => {
     document.exitFullscreen();
   }
 }
+
+onBeforeRouteLeave((to, _, next) => {
+    if (to.name === 'home') {
+        send("window:restore", "");
+    }
+  next();
+});
 </script>
 
 <template>

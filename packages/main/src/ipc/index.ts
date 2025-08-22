@@ -10,6 +10,7 @@ import { mangaDatabaseHandlers } from "./manga/database.js";
 import { chapterImageHandlers } from "./manga/chapterImage.js";
 import { dialogHandlers } from "./handlers/dialogHandlers.js";
 import { downloadHandlers } from "./handlers/downloadHandlers.js";
+import { windowHandler } from "./handlers/windowHandler.js";
 
 const modules = [
   fileHandlers,
@@ -19,6 +20,7 @@ const modules = [
   chapterImageHandlers,
   dialogHandlers,
   downloadHandlers,
+  windowHandler,
 ];
 
 // Enhanced handler wrapper with rate limiting and logging

@@ -37,7 +37,7 @@ const genBlue: IpcHandler<[string], string> = {
       return createErrorResponse(error as Error, "Failed to generate blue image");
     }
   },
-  validateInput: (msg: string) => msg && msg.trim().length > 0
+  validateInput: (msg: string) => Boolean(msg && msg.trim().length > 0)
 };
 
 const convertToWebp: IpcHandler<[string], any> = {
