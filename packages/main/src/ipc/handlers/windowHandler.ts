@@ -124,6 +124,24 @@ const getCurrentWindowInfo: IpcHandler<[], any> = {
     }
 }
 
+const getWindowState: IpcHandler<[], { isMaximized: boolean }> = {
+    name: "window:getState",
+    handler: async (): IpcResult<{ isMaximized: boolean }> => {
+        try {
+            const window = getCurrentWindow();
+            if (window) {
+                const state = {
+                    isMaximized: window.isMaximized()
+                };
+                return createSuccessResponse(state, "Window state retrieved successfully");
+            }
+            return createErrorResponse("No active window found");
+        } catch (error) {
+            return createErrorResponse(error as Error, "Failed to get window state");
+        }
+    }
+}
+
 const getAllWindows: IpcHandler<[], any> = {
     name: "window:get-all",
     handler: async (): IpcResult<any> => {
@@ -168,6 +186,35 @@ const setWindowSize: IpcHandler<[{ width: number; height: number }], boolean> = 
     }
 }
 
+const restoreWindowBounds: IpcHandler<[string], boolean> = {
+    name: "window:restore-bounds",
+    handler: async (_, params: string): IpcResult<boolean> => {
+        try {
+            const bounds = JSON.parse(params);
+            const { width, height, x, y } = bounds;
+            
+            if (width <= 0 || height <= 0) {
+                return createErrorResponse("Width and height must be positive numbers");
+            }
+            
+            const window = getCurrentWindow();
+            if (window) {
+                // First unmaximize if needed
+                if (window.isMaximized()) {
+                    window.unmaximize();
+                }
+                
+                // Set size and position
+                window.setBounds({ width, height, x, y });
+                return createSuccessResponse(true, `Window restored to ${width}x${height} at (${x},${y})`);
+            }
+            return createErrorResponse("No active window found");
+        } catch (error) {
+            return createErrorResponse(error as Error, "Failed to restore window bounds");
+        }
+    }
+}
+
 const toggleFullScreen: IpcHandler<[], boolean> = {
     name: "window:toggle-fullscreen",
     handler: async (): IpcResult<boolean> => {
@@ -193,8 +240,10 @@ export const windowHandler: IpcModule = {
         unmaximizeWindow,
         closeWindow,
         getCurrentWindowInfo,
+        getWindowState,
         getAllWindows,
         setWindowSize,
+        restoreWindowBounds,
         toggleFullScreen
     ]
 }

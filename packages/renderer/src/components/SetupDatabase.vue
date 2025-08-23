@@ -14,13 +14,25 @@ const scanError = ref<string | null>(null);
 const dialog = getDialog();
 
 const selectMangaDirectory = async () => {
-  const returnVal = await dialog.showOpenDialog({
-    properties: ["openDirectory"],
-  });
-  if (returnVal.canceled) {
-    return;
+  try {
+    const returnVal = await dialog.showOpenDialog({
+      properties: ["openDirectory"],
+    });
+    
+    if (returnVal.canceled) {
+      return;
+    }
+    
+    if (returnVal.filePaths && returnVal.filePaths.length > 0) {
+      mangaDirectory.value = returnVal.filePaths[0];
+    } else {
+      console.error('No file paths returned from dialog');
+      alert('Error: No directory selected');
+    }
+  } catch (error) {
+    console.error('Error selecting manga directory:', error);
+    alert(`Error selecting directory: ${error}`);
   }
-  mangaDirectory.value = returnVal.filePaths[0];
 };
 
 const setupDatabase = async () => {
@@ -36,24 +48,25 @@ const setupDatabase = async () => {
     // Scan directory and auto-import
     const result = await mangaAPI.scanDirectoryAndImport(mangaDirectory.value);
     
-    if (!result.success || !result.data) {
-      throw new Error(result.error || 'Failed to scan directory');
+    // Check if the response is successful and contains data
+    if (result.success && result.data && result.data.scanResult && result.data.importResult) {
+      scanResult.value = result.data.scanResult;
+      importResult.value = result.data.importResult;
+      
+      // Show success message
+      const message = `✅ Database setup complete!\n\n` +
+        `📁 Directory: ${mangaDirectory.value}\n` +
+        `📚 Manga found: ${result.data.scanResult.totalManga}\n` +
+        `📖 Chapters found: ${result.data.scanResult.totalChapters}\n` +
+        `💾 Imported: ${result.data.importResult.insertedManga} manga, ${result.data.importResult.insertedChapters} chapters`;
+      
+      alert(message);
+      
+      // Update database status
+      isDbExist.value = true;
+    } else {
+      throw new Error(result.error || 'Invalid response from scan directory');
     }
-    
-    scanResult.value = result.data.scanResult;
-    importResult.value = result.data.importResult;
-    
-    // Show success message
-    const message = `✅ Database setup complete!\n\n` +
-      `📁 Directory: ${mangaDirectory.value}\n` +
-      `📚 Manga found: ${result.data.scanResult.totalManga}\n` +
-      `📖 Chapters found: ${result.data.scanResult.totalChapters}\n` +
-      `💾 Imported: ${result.data.importResult.insertedManga} manga, ${result.data.importResult.insertedChapters} chapters`;
-    
-    alert(message);
-    
-    // Update database status
-    isDbExist.value = true;
     
   } catch (error) {
     console.error('Setup database error:', error);

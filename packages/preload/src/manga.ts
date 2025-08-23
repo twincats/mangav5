@@ -23,6 +23,9 @@ export interface ChapterData {
   releaseTime?: string;
   language?: string;
   statusRead?: boolean;
+  path?: string;
+  isCompressed?: boolean;
+  status?: 'valid' | 'missing' | 'corrupted';
 }
 
 export interface ScrapingRuleData {

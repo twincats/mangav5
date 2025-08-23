@@ -26,6 +26,10 @@ interface Chapter {
   translatorGroup: string | null;
   releaseTime: string | null;
   language: string | null;
+  statusRead: boolean;
+  path: string | null;
+  isCompressed: boolean;
+  status: 'valid' | 'missing' | 'corrupted';
   createdAt: string;
 }
 
@@ -43,6 +47,9 @@ interface BatchMangaData {
     translatorGroup?: string;
     releaseTime?: string;
     language?: string;
+    path?: string;
+    isCompressed?: boolean;
+    status?: 'valid' | 'missing' | 'corrupted';
   }[];
 }
 
@@ -91,7 +98,10 @@ const newBatchChapter = ref({
   volume: undefined as number | undefined,
   translatorGroup: '',
   releaseTime: '',
-  language: ''
+  language: '',
+  path: '',
+  isCompressed: false,
+  status: 'valid' as 'valid' | 'missing' | 'corrupted'
 });
 
 // Load manga list and statuses on component mount
@@ -279,6 +289,9 @@ function addBatchChapter(mangaIndex: number) {
       translatorGroup: newBatchChapter.value.translatorGroup || undefined,
       releaseTime: newBatchChapter.value.releaseTime || undefined,
       language: newBatchChapter.value.language || undefined,
+      path: newBatchChapter.value.path || undefined,
+      isCompressed: newBatchChapter.value.isCompressed,
+      status: newBatchChapter.value.status,
     });
     
     // Reset chapter form
@@ -288,7 +301,10 @@ function addBatchChapter(mangaIndex: number) {
       volume: undefined,
       translatorGroup: '',
       releaseTime: '',
-      language: ''
+      language: '',
+      path: '',
+      isCompressed: false,
+      status: 'valid' as 'valid' | 'missing' | 'corrupted'
     };
   }
 }
@@ -542,6 +558,26 @@ async function deleteManga(mangaId: number) {
                   class="language-input"
                 />
               </div>
+              <div class="chapter-input-row">
+                <input 
+                  v-model="newBatchChapter.path" 
+                  type="text" 
+                  placeholder="Chapter path"
+                  class="path-input"
+                />
+                <label class="checkbox-label">
+                  <input 
+                    v-model="newBatchChapter.isCompressed" 
+                    type="checkbox"
+                  />
+                  Compressed
+                </label>
+                <select v-model="newBatchChapter.status" class="status-select">
+                  <option value="valid">Valid</option>
+                  <option value="missing">Missing</option>
+                  <option value="corrupted">Corrupted</option>
+                </select>
+              </div>
               <button @click="addBatchChapter(mangaIndex)" type="button">Add Chapter</button>
             </div>
             
@@ -552,6 +588,9 @@ async function deleteManga(mangaId: number) {
                 <div class="chapter-info">
                   <span v-if="chapter.volume">Vol. {{ chapter.volume }}</span>
                   <span v-if="chapter.translatorGroup">{{ chapter.translatorGroup }}</span>
+                  <span v-if="chapter.path" class="chapter-path">{{ chapter.path }}</span>
+                  <span v-if="chapter.isCompressed" class="compressed-badge">Compressed</span>
+                  <span :class="`status-badge status-${chapter.status || 'valid'}`">{{ chapter.status || 'valid' }}</span>
                 </div>
                 <button @click="removeBatchChapter(mangaIndex, chapterIndex)" type="button" class="remove-btn">
                   ×
@@ -628,8 +667,11 @@ async function deleteManga(mangaId: number) {
             <div class="chapter-title">
               {{ chapter.chapterTitle || `Chapter ${chapter.chapterNumber}` }}
             </div>
-            <div class="chapter-info" v-if="chapter.volume">
-              Vol. {{ chapter.volume }}
+            <div class="chapter-info">
+              <span v-if="chapter.volume">Vol. {{ chapter.volume }}</span>
+              <span v-if="chapter.path" class="chapter-path">{{ chapter.path }}</span>
+              <span v-if="chapter.isCompressed" class="compressed-badge">Compressed</span>
+              <span :class="`status-badge status-${chapter.status || 'valid'}`">{{ chapter.status || 'valid' }}</span>
             </div>
           </li>
         </ul>
@@ -873,6 +915,59 @@ button:hover {
 .chapter-info {
   color: #666;
   font-size: 0.9em;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chapter-path {
+  background-color: #e3f2fd;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 0.8em;
+}
+
+.compressed-badge {
+  background-color: #fff3e0;
+  color: #e65100;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+.status-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+.status-valid {
+  background-color: #e8f5e8;
+  color: #2e7d32;
+}
+
+.status-missing {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.status-corrupted {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.9em;
+}
+
+.status-select {
+  min-width: 120px;
 }
 
 .manga-list ul {

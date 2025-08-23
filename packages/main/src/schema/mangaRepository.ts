@@ -26,6 +26,9 @@ export interface ChapterData {
   releaseTime?: string;
   language?: string;
   statusRead?: boolean;
+  path?: string;
+  isCompressed?: boolean;
+  status?: 'valid' | 'missing' | 'corrupted';
 }
 
 export interface ScrapingRuleData {
@@ -531,6 +534,9 @@ export class MangaRepository extends BaseRepository {
                     translatorGroup: chapterData.translatorGroup,
                     releaseTime: chapterData.releaseTime,
                     language: chapterData.language,
+                    path: chapterData.path,
+                    isCompressed: chapterData.isCompressed,
+                    status: chapterData.status,
                   })
                   .run();
                 result.insertedChapters++;
@@ -590,6 +596,9 @@ export class MangaRepository extends BaseRepository {
                 translatorGroup: chapterData.translatorGroup,
                 releaseTime: chapterData.releaseTime,
                 language: chapterData.language,
+                path: chapterData.path,
+                isCompressed: chapterData.isCompressed,
+                status: chapterData.status,
               })
               .run();
             result.insertedChapters++;
@@ -686,6 +695,9 @@ export class MangaRepository extends BaseRepository {
             releaseTime: schema.chapters.releaseTime,
             language: schema.chapters.language,
             statusRead: schema.chapters.statusRead,
+            path: schema.chapters.path,
+            isCompressed: schema.chapters.isCompressed,
+            status: schema.chapters.status,
             createdAt: schema.chapters.createdAt
           })
           .from(schema.chapters)

@@ -46,6 +46,9 @@ export const chapters = sqliteTable('Chapters', {
   releaseTime: text('release_time'),
   language: text('language'),
   statusRead: integer('status_read', { mode: 'boolean' }).default(false),
+  path: text('path'),
+  isCompressed: integer('is_compressed', { mode: 'boolean' }).default(false),
+  status: text('status', { enum: ['valid', 'missing', 'corrupted'] }).default('valid'),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 

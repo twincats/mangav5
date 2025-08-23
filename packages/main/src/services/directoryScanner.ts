@@ -240,6 +240,9 @@ export class DirectoryScanner {
 
         console.log(`✅ Extracted chapter number: ${chapterNumber} from folder: "${folderName}"`);
         
+        // Generate path: /{mangaTitle}/{chapterNumber}/
+        const path = `/${mangaName}/${chapterNumber}/`;
+        
         return {
           chapterNumber,
           chapterTitle: `Chapter ${chapterNumber}`,
@@ -247,11 +250,14 @@ export class DirectoryScanner {
           translatorGroup: 'Unknown',
           releaseTime: new Date().toISOString().split('T')[0], // Today's date
           language: 'English',
-          chapterPath: filePath // Store the folder path for later use
+          path: path,
+          isCompressed: false, // Folder is not compressed
+          status: 'valid' as const
         };
       } else {
         // Handle file path (compressed chapter)
         const fileName = basename(filePath, extname(filePath));
+        const fileExt = extname(filePath).toLowerCase();
         console.log(`🔍 Processing filename: "${fileName}" for manga: ${mangaName}`);
         
         // Try to extract chapter number from filename
@@ -264,6 +270,12 @@ export class DirectoryScanner {
 
         console.log(`✅ Extracted chapter number: ${chapterNumber} from filename: "${fileName}"`);
         
+        // Generate path: /{mangaTitle}/{chapterNumber}
+        const path = `/${mangaName}/${chapterNumber}`;
+        
+        // Check if file is compressed
+        const isCompressed = ['.zip', '.cbz'].includes(fileExt);
+        
         return {
           chapterNumber,
           chapterTitle: `Chapter ${chapterNumber}`,
@@ -271,7 +283,9 @@ export class DirectoryScanner {
           translatorGroup: 'Unknown',
           releaseTime: new Date().toISOString().split('T')[0], // Today's date
           language: 'English',
-          chapterPath: filePath // Store the file path for later use
+          path: path,
+          isCompressed: isCompressed,
+          status: 'valid' as const
         };
       }
     } catch (error) {

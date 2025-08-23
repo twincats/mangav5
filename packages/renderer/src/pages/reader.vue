@@ -7,6 +7,14 @@ const route = useRoute();
 const router = useRouter();
 const chapterId = route.params.chapterId;
 
+// Window state management
+const wasMaximized = ref<boolean>(false);
+const previousWindowBounds = ref<{ width: number; height: number; x: number; y: number } | null>(null);
+
+// Reading progress tracking
+const hasReachedBottom = ref<boolean>(false);
+const isUpdatingReadStatus = ref<boolean>(false);
+
 const chapterImageList = ref<string[]>([]);
 const currentChapter = ref<any>(null);
 const mangaInfo = ref<any>(null);
@@ -17,11 +25,19 @@ const readingDirection = ref<'ltr' | 'rtl'>('ltr');
 const containerWidth = ref<'normal' | 'full'>('normal');
 
 watch(()=>route.params.chapterId, async (newVal)=>{
+    // Reset reading progress state for new chapter
+    hasReachedBottom.value = false;
+    
     await getCurrentChapterInfo(Number(newVal));
     await getChapterImageList(Number(newVal));
     currentChapterIndex.value = allChapters.value.findIndex(
         chapter => chapter.id === Number(newVal)
     );
+    
+    // Check if new chapter is already read
+    if (currentChapter.value?.statusRead) {
+        hasReachedBottom.value = true;
+    }
 })
 
 const getChapterImageList = async (chapterId: number) => {
@@ -99,6 +115,99 @@ const toggleContainerWidth = () => {
     containerWidth.value = containerWidth.value === 'normal' ? 'full' : 'normal';
 }
 
+// Update chapter read status
+const updateChapterReadStatus = async () => {
+    if (!currentChapter.value || hasReachedBottom.value || isUpdatingReadStatus.value) {
+        return;
+    }
+    
+    try {
+        isUpdatingReadStatus.value = true;
+        
+        const result = await mangaAPI.updateChapterReadStatus(currentChapter.value.chapterId, true);
+        if (result.success) {
+            hasReachedBottom.value = true;
+            // Update local state
+            if (currentChapter.value) {
+                currentChapter.value.statusRead = true;
+            }
+            console.log('✅ Chapter marked as read');
+        } else {
+            console.error('❌ Failed to update chapter read status:', result.error);
+        }
+    } catch (error) {
+        console.error('❌ Error updating chapter read status:', error);
+    } finally {
+        isUpdatingReadStatus.value = false;
+    }
+}
+
+// Check if user has scrolled to bottom
+const checkScrollPosition = () => {
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollHeight = document.documentElement.scrollHeight;
+    const clientHeight = document.documentElement.clientHeight;
+    
+    // Check if scrolled to bottom (with small threshold)
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 100;
+    
+    if (isAtBottom && !hasReachedBottom.value) {
+        updateChapterReadStatus();
+    }
+}
+
+// Save window state when entering reader
+onMounted(async () => {
+    // Check current window state before maximizing
+    const currentState = await send("window:getState", "");
+    wasMaximized.value = currentState?.success && currentState?.data?.isMaximized || false;
+    
+    // If window is not maximized, save the current bounds for later restoration
+    if (!wasMaximized.value) {
+        const windowInfo = await send("window:get-current", "");
+        if (windowInfo?.success && windowInfo?.data?.bounds) {
+            previousWindowBounds.value = windowInfo.data.bounds;
+        }
+    }
+    
+    // Maximize window for better reading experience
+    await send("window:maximize", "");
+    
+    // Load initial data
+    await getCurrentChapterInfo(Number(chapterId));
+    await getChapterImageList(Number(chapterId));
+    
+    // Add scroll event listener for reading progress tracking
+    window.addEventListener('scroll', checkScrollPosition);
+    
+    // Check if chapter is already read
+    if (currentChapter.value?.statusRead) {
+        hasReachedBottom.value = true;
+    }
+});
+
+// Restore window state when leaving reader
+onBeforeRouteLeave((_to, _from, next) => {
+    // Remove scroll event listener
+    window.removeEventListener('scroll', checkScrollPosition);
+    
+    // If window was maximized before entering reader, keep it maximized
+    // If window was not maximized before entering reader, restore it to previous bounds
+    if (wasMaximized.value) {
+        // Keep maximized - do nothing
+    } else {
+        // Restore to previous bounds
+        if (previousWindowBounds.value) {
+            const { width, height, x, y } = previousWindowBounds.value;
+            send("window:restore-bounds", JSON.stringify({ width, height, x, y }));
+        } else {
+            // Fallback to restore if bounds not available
+            send("window:restore", "");
+        }
+    }
+    next();
+});
+
 const getReadingModeLabel = computed(() => {
     return readingMode.value === 'long-strip' ? 'Long Strip' : '2 Pages';
 })
@@ -123,11 +232,6 @@ const getContainerWidthIcon = computed(() => {
     return containerWidth.value === 'normal' ? 'crop_square' : 'fullscreen';
 })
 
-onMounted(async () => {
-    await getCurrentChapterInfo(Number(chapterId));
-    await getChapterImageList(Number(chapterId));
-});
-
 const readerContainer = useTemplateRef('readerContainer');
 const toggleFullScreen = () => {
   if (!document.fullscreenElement) {
@@ -139,12 +243,6 @@ const toggleFullScreen = () => {
   }
 }
 
-onBeforeRouteLeave((to, _, next) => {
-    if (to.name === 'home') {
-        send("window:restore", "");
-    }
-  next();
-});
 </script>
 
 <template>
@@ -177,6 +275,14 @@ onBeforeRouteLeave((to, _, next) => {
                         :icon="getContainerWidthIcon"
                         @click="toggleContainerWidth" 
                         :label="getContainerWidthLabel" 
+                    />
+                    
+                    <!-- Read Status Indicator -->
+                    <q-chip
+                        :color="currentChapter?.statusRead ? 'positive' : 'grey'"
+                        :icon="currentChapter?.statusRead ? 'check_circle' : 'radio_button_unchecked'"
+                        :label="currentChapter?.statusRead ? 'Read' : 'Unread'"
+                        size="sm"
                     />
                 </div>
             </div>

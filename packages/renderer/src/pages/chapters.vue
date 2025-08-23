@@ -51,6 +51,24 @@ const goBack = () => {
   router.push('/');
 };
 
+/**
+ * Mendapatkan warna untuk status chapter
+ * @param status - Status chapter
+ * @returns Warna yang sesuai dengan status
+ */
+const getStatusColor = (status?: string) => {
+  switch (status) {
+    case 'valid':
+      return 'positive';
+    case 'missing':
+      return 'negative';
+    case 'corrupted':
+      return 'orange';
+    default:
+      return 'positive';
+  }
+};
+
 onMounted(() => {
   if (mangaId && !isNaN(mangaId)) {
     getMangaWithChapters(mangaId);
@@ -168,13 +186,28 @@ onMounted(() => {
               <div v-if="chapter.translatorGroup" class="text-caption q-mt-xs">
                 {{ chapter.translatorGroup }}
               </div>
-              <div class="q-mt-sm">
+              <div class="q-mt-sm q-gutter-xs">
                 <q-chip 
                   :color="chapter.statusRead ? 'positive' : 'grey'"
                   text-color="white"
                   size="sm"
                 >
                   {{ chapter.statusRead ? 'Read' : 'Unread' }}
+                </q-chip>
+                <q-chip 
+                  v-if="chapter.isCompressed"
+                  color="orange"
+                  text-color="white"
+                  size="sm"
+                >
+                  Compressed
+                </q-chip>
+                <q-chip 
+                  :color="getStatusColor(chapter.status)"
+                  text-color="white"
+                  size="sm"
+                >
+                  {{ chapter.status || 'valid' }}
                 </q-chip>
               </div>
             </q-card-section>

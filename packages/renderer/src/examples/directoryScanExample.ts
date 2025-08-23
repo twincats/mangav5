@@ -142,3 +142,52 @@ export const unsupportedFilenameFormats = [
   'Special.cbz',        // ❌ No number
   'Bonus.cbz'           // ❌ No number
 ];
+
+// Contoh test untuk memverifikasi field-field baru pada chapters
+export async function testNewChapterFields(directoryPath: string) {
+  try {
+    console.log('🧪 Testing new chapter fields...');
+    
+    const result = await window.mangaAPI.scanDirectoryAndImport(directoryPath);
+    
+    if (result.scanResult.mangaList.length > 0) {
+      const firstManga = result.scanResult.mangaList[0];
+      console.log(`📚 Testing manga: ${firstManga.mainTitle}`);
+      
+      if (firstManga.chapters && firstManga.chapters.length > 0) {
+        const firstChapter = firstManga.chapters[0];
+        console.log('📖 Chapter details:');
+        console.log(`   Chapter Number: ${firstChapter.chapterNumber}`);
+        console.log(`   Path: ${firstChapter.path || 'NOT SET'}`);
+        console.log(`   Is Compressed: ${firstChapter.isCompressed || 'NOT SET'}`);
+        console.log(`   Status: ${firstChapter.status || 'NOT SET'}`);
+        
+        // Verify new fields are set correctly
+        const hasPath = firstChapter.path && firstChapter.path.startsWith('/');
+        const hasCompression = typeof firstChapter.isCompressed === 'boolean';
+        const hasStatus = firstChapter.status && ['valid', 'missing', 'corrupted'].includes(firstChapter.status);
+        
+        console.log('✅ Field validation:');
+        console.log(`   Path format: ${hasPath ? '✅' : '❌'}`);
+        console.log(`   Compression flag: ${hasCompression ? '✅' : '❌'}`);
+        console.log(`   Status enum: ${hasStatus ? '✅' : '❌'}`);
+        
+        if (hasPath && hasCompression && hasStatus) {
+          console.log('🎉 All new fields are working correctly!');
+        } else {
+          console.log('⚠️ Some fields may not be set correctly');
+        }
+      } else {
+        console.log('❌ No chapters found for testing');
+      }
+    } else {
+      console.log('❌ No manga found for testing');
+    }
+    
+    return result;
+    
+  } catch (error) {
+    console.error('❌ Error testing new chapter fields:', error);
+    throw error;
+  }
+}

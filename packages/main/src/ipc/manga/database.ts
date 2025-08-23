@@ -597,7 +597,15 @@ const getChapterImageList = async (_event: IpcMainInvokeEvent, chapterId: number
     if (manga.mainTitle === null) {
       return createErrorResponse("Manga not found");
     }
-    const chapterPath = `${manga.mainTitle}/${chapter.chapterNumber}`;
+    // Use the path field if available, otherwise fallback to the old format
+    let chapterPath: string;
+    if (chapter.path) {
+      // Remove leading slash if present
+      chapterPath = chapter.path.startsWith('/') ? chapter.path.slice(1) : chapter.path;
+    } else {
+      // Fallback to old format for backward compatibility
+      chapterPath = `${manga.mainTitle}/${chapter.chapterNumber}`;
+    }
 
     const result = await getImageList(chapterPath);
     return createSuccessResponse(result, "Chapter image list retrieved successfully");

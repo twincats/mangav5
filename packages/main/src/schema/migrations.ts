@@ -28,7 +28,7 @@ export async function runMigrations(sqlite: Database) {
 
     // Check current database version
     const currentVersion = getCurrentVersion(sqlite);
-    const targetVersion = '1.1.0'; // Updated schema version with status_read field
+    const targetVersion = '1.2.0'; // Updated schema version with new fields: path, is_compressed, status
     
     if (currentVersion === targetVersion) {
       console.log('Database is up to date, no migrations needed');
@@ -89,6 +89,9 @@ export async function runMigrations(sqlite: Database) {
         release_time TEXT,
         language TEXT,
         status_read INTEGER DEFAULT 0,
+        path TEXT,
+        is_compressed INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'valid' CHECK (status IN ('valid', 'missing', 'corrupted')),
         created_at TEXT DEFAULT (datetime('now')),
         FOREIGN KEY (manga_id) REFERENCES Manga(manga_id)
       );
@@ -113,18 +116,43 @@ export async function runMigrations(sqlite: Database) {
       sqlite.prepare('INSERT INTO MangaStatus (status_name) VALUES (?)').run('Cancelled');
     }
 
-    // Add status_read field to existing Chapters table if it doesn't exist
+    // Add new fields to existing Chapters table if they don't exist
     try {
       const columnExists = sqlite.prepare("PRAGMA table_info(Chapters)").all() as Array<{name: string}>;
-      const hasStatusRead = columnExists.some(col => col.name === 'status_read');
       
+      // Add path field
+      const hasPath = columnExists.some(col => col.name === 'path');
+      if (!hasPath) {
+        console.log('Adding path field to Chapters table...');
+        sqlite.exec('ALTER TABLE Chapters ADD COLUMN path TEXT');
+        console.log('path field added successfully');
+      }
+      
+      // Add is_compressed field
+      const hasIsCompressed = columnExists.some(col => col.name === 'is_compressed');
+      if (!hasIsCompressed) {
+        console.log('Adding is_compressed field to Chapters table...');
+        sqlite.exec('ALTER TABLE Chapters ADD COLUMN is_compressed INTEGER DEFAULT 0');
+        console.log('is_compressed field added successfully');
+      }
+      
+      // Add status field
+      const hasStatus = columnExists.some(col => col.name === 'status');
+      if (!hasStatus) {
+        console.log('Adding status field to Chapters table...');
+        sqlite.exec('ALTER TABLE Chapters ADD COLUMN status TEXT DEFAULT \'valid\' CHECK (status IN (\'valid\', \'missing\', \'corrupted\'))');
+        console.log('status field added successfully');
+      }
+      
+      // Add status_read field if it doesn't exist (for backward compatibility)
+      const hasStatusRead = columnExists.some(col => col.name === 'status_read');
       if (!hasStatusRead) {
         console.log('Adding status_read field to Chapters table...');
         sqlite.exec('ALTER TABLE Chapters ADD COLUMN status_read INTEGER DEFAULT 0');
         console.log('status_read field added successfully');
       }
     } catch (error) {
-      console.log('Chapters table might not exist yet, skipping status_read addition');
+      console.log('Chapters table might not exist yet, skipping field additions');
     }
 
     // Fix existing timestamp fields if they contain "CURRENT_TIMESTAMP" text

@@ -10,13 +10,27 @@ export function getDialog() {
   const showOpenDialog = async (
     option: OpenDialogOptions
   ): Promise<OpenDialogReturnValue> => {
-    return ipcRenderer.invoke("dialog:showOpen", option);
+    const result = await ipcRenderer.invoke("dialog:showOpen", option);
+    
+    // Handle IpcResult wrapper
+    if (result && result.success && result.data) {
+      return result.data;
+    } else {
+      throw new Error(result?.error || 'Failed to show open dialog');
+    }
   };
 
   const showSaveDialog = async (
     option: SaveDialogOptions
   ): Promise<SaveDialogReturnValue> => {
-    return ipcRenderer.invoke("dialog:showSave", option);
+    const result = await ipcRenderer.invoke("dialog:showSave", option);
+    
+    // Handle IpcResult wrapper
+    if (result && result.success && result.data) {
+      return result.data;
+    } else {
+      throw new Error(result?.error || 'Failed to show save dialog');
+    }
   };
 
   return { showOpenDialog, showSaveDialog };
