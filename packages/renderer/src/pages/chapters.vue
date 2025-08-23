@@ -149,11 +149,11 @@ onMounted(() => {
       <!-- Chapters List -->
       <div class="chapters-section">
         <div class="text-h6 q-mb-md">Chapters</div>
-        <div class="row q-gutter-md">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <q-card 
             v-for="chapter in mangaData.chapters" 
             :key="chapter.id"
-            class="chapter-card col-12 col-sm-6 col-md-4 col-lg-3"
+            class="chapter-card "
             clickable
             @click="readChapter(chapter.id)"
           >
