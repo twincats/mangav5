@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { mangaAPI } from "@app/preload";
+import { mangaAPI, showContextMenu } from "@app/preload";
 import type { LatestMangaResponse  } from "@app/preload";
 import { useRouter } from "vue-router";
 
@@ -54,14 +54,23 @@ const clickChapter = (chapterId:number)=>{
  router.push(`/read/${chapterId}`);
 }
 
-
+const clickContextMenu = (event: Event) => {
+  const target = event.target as HTMLElement;
+  const elementType = target.tagName.toLowerCase(); // e.g., 'img', 'div', etc.
+  const selectionText = window.getSelection()?.toString();
+  showContextMenu({
+    routeName: 'home',
+    elementType,
+    selectionText,
+  });
+}
 </script>
 
 <template>
   <div class="q-px-md">
     <div class="text-subtitle1">Latest Manga</div>
     <div class="grid grid-cols-6 xl:grid-cols-10 gap-2" >
-      <q-card v-for="manga in latestManga" class="my-card no-shadow select-none group">
+      <q-card v-for="manga in latestManga" class="my-card no-shadow select-none group" @contextmenu="clickContextMenu">
       <q-img @click="clickManga(manga.id)" :src="`manga://${manga.mainTitle}/cover.webp`" class="relative">
         <div class="absolute-top-right text-center" style="padding: 0.5rem !important; border-radius: 0 0 0 0.5rem;">{{ formatDate(manga.downloadTime) }}</div>
         <div  class="absolute-bottom p-1 text-subtitle2 text-center transition-all duration-300 ease-in-out group-hover:h-[40%] h-[4rem]">

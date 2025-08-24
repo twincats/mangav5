@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed, useTemplateRef } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
-import { mangaAPI, send } from "@app/preload";
+import { mangaAPI, send, showContextMenu } from "@app/preload";
 
 const route = useRoute();
 const router = useRouter();
@@ -184,12 +184,70 @@ onMounted(async () => {
     if (currentChapter.value?.statusRead) {
         hasReachedBottom.value = true;
     }
+    
+    // Listen for context menu actions
+    window.addEventListener('context-menu-action', (e: Event) => {
+        const customEvent = e as CustomEvent;
+        const action = customEvent.detail;
+        switch(action) {
+            case 'toggle-fullscreen':
+                toggleFullScreen();
+                break;
+            case 'toggle-reading-mode':
+                toggleReadingMode();
+                break;
+            case 'toggle-reading-direction':
+                toggleReadingDirection();
+                break;
+            case 'toggle-container-width':
+                toggleContainerWidth();
+                break;
+            case 'previous-chapter':
+                navigateToChapter('prev');
+                break;
+            case 'next-chapter':
+                navigateToChapter('next');
+                break;
+            case 'go-home':
+                router.push('/');
+                break;
+        }
+    });
 });
 
 // Restore window state when leaving reader
 onBeforeRouteLeave((_to, _from, next) => {
     // Remove scroll event listener
     window.removeEventListener('scroll', checkScrollPosition);
+    
+    // Remove context menu event listener
+    window.removeEventListener('context-menu-action', (e: Event) => {
+        const customEvent = e as CustomEvent;
+        const action = customEvent.detail;
+        switch(action) {
+            case 'toggle-fullscreen':
+                toggleFullScreen();
+                break;
+            case 'toggle-reading-mode':
+                toggleReadingMode();
+                break;
+            case 'toggle-reading-direction':
+                toggleReadingDirection();
+                break;
+            case 'toggle-container-width':
+                toggleContainerWidth();
+                break;
+            case 'previous-chapter':
+                navigateToChapter('prev');
+                break;
+            case 'next-chapter':
+                navigateToChapter('next');
+                break;
+            case 'go-home':
+                router.push('/');
+                break;
+        }
+    });
     
     // If window was maximized before entering reader, keep it maximized
     // If window was not maximized before entering reader, restore it to previous bounds
@@ -243,9 +301,25 @@ const toggleFullScreen = () => {
   }
 }
 
+const clickContextMenu = (e:Event)=>{
+  e.preventDefault();
+  const target = e.target as HTMLElement;
+  const elementType = target.tagName.toLowerCase();
+  showContextMenu({
+    routeName: 'reader',
+    elementType,
+    readingMode: readingMode.value,
+    readingDirection: readingDirection.value,
+    isFullscreen: document.fullscreenElement !== null,
+    containerWidth: containerWidth.value,
+    canNavigatePrev: canNavigatePrev(),
+    canNavigateNext: canNavigateNext(),
+  });
+}
 </script>
 
 <template>
+    <div @contextmenu="clickContextMenu">
     <div class="reader-container" :class="containerWidth" ref="readerContainer">
         <!-- Header dengan navigasi -->
         <div class="reader-header">
@@ -375,6 +449,7 @@ const toggleFullScreen = () => {
                 </div>
             </template>
         </div>
+    </div>
     </div>
 </template>
 

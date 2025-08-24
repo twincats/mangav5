@@ -80,3 +80,5 @@ export function registerIpcHandlers() {
 
   console.log(`Registered ${handlers.length} enhanced IPC handlers with rate limiting and logging`);
 }
+
+export { registerContextMenu } from "./contextMenu.js";
