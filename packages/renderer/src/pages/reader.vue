@@ -79,9 +79,6 @@ const tryRestoreArchiveFromBackup = async (chapterId: number) => {
             return;
         }
         
-        // Construct archive path
-        const archivePath = `${manga.mainTitle}/${chapter.chapterNumber}`;
-        
         // Try to restore from backup using existing API
         // For now, we'll use a simple approach: try to get image list again
         // The backend should handle archive corruption automatically
@@ -394,13 +391,11 @@ const deleteImageFile = async (imageFileName: string, chapterPath: string) => {
     
     if (isCompressed) {
       // Delete from compressed file - need to find the correct extension
-      let archivePath: string;
       let cbzPath: string;
       let zipPath: string;
       
       // Check if path already has extension
       if (chapterPath.endsWith('.cbz') || chapterPath.endsWith('.zip')) {
-        archivePath = chapterPath;
         // Extract base path without extension for fallback
         const basePath = chapterPath.replace(/\.(cbz|zip)$/, '');
         cbzPath = `${basePath}.cbz`;
@@ -413,11 +408,6 @@ const deleteImageFile = async (imageFileName: string, chapterPath: string) => {
         // This is more robust than assuming just one extension
         cbzPath = `${chapterPath}.cbz`;
         zipPath = `${chapterPath}.zip`;
-        
-        // Try to determine which extension actually exists
-        // For now, we'll try .cbz first, then .zip as fallback
-        // In the future, we could check which file actually exists on the filesystem
-        archivePath = cbzPath;
       }
       
       // For compressed files, file path should include subfolder structure
