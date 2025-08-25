@@ -88,6 +88,15 @@ export interface MangaAPI {
   ) => Promise<void>;
   deleteChapter: (chapterId: number) => Promise<void>;
 
+  // Chapter image operations
+  getChapterImageList: (chapterId: number) => Promise<string[]>;
+
+  // Compressed file operations
+  deleteFromCompressFile: (archivePath: string, filesToDelete: string[]) => Promise<boolean>;
+
+  // Directory file operations
+  deleteFileFromDirectory: (chapterPath: string, fileName: string) => Promise<boolean>;
+
   // Manga status operations
   getAllStatuses: () => Promise<any[]>;
 

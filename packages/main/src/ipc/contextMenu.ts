@@ -2,8 +2,8 @@ import { ipcMain, Menu } from "electron";
 import type {MenuItemConstructorOptions} from "electron"
 
 export function registerContextMenu() {
-    ipcMain.on('context-menu', (event, context: { routeName: string, elementType: string, selectionText?: string, readingMode?: string, readingDirection?: string, isFullscreen?: boolean, containerWidth?: string, canNavigatePrev?: boolean, canNavigateNext?: boolean}) => {
-        const { routeName, elementType, selectionText, readingMode, readingDirection, isFullscreen, containerWidth, canNavigatePrev, canNavigateNext } = context;
+    ipcMain.on('context-menu', (event, context: { routeName: string, elementType: string, selectionText?: string, readingMode?: string, readingDirection?: string, isFullscreen?: boolean, containerWidth?: string, canNavigatePrev?: boolean, canNavigateNext?: boolean, imageFileName?: string, chapterPath?: string}) => {
+        const { routeName, elementType, selectionText, readingMode, readingDirection, isFullscreen, containerWidth, canNavigatePrev, canNavigateNext, imageFileName, chapterPath } = context;
         // Base menu items for all routes
         const baseMenuItems: MenuItemConstructorOptions[] = [];
 
@@ -36,7 +36,7 @@ export function registerContextMenu() {
                         { label: 'Copy Image'},
                         { label: 'Image Link'},
                         { type: 'separator' },
-                        { label: 'Delete Chapter Image'}
+                        { label: `Delete Chapter Image ${context.imageFileName || ''}`, click: () => event.sender.send('execute-context-action', 'delete-image', context.imageFileName, context.chapterPath)}
                     )
                 }
                 break;

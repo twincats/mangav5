@@ -12,7 +12,7 @@ import {
 } from "../../schema/mangaRepository.js";
 import { DatabaseManager } from "../../schema/database.js";
 import { DirectoryScanner, DirectoryScanResult } from "../../services/directoryScanner.js";
-import { getImageList } from "../../services/mangaProtocolService.js";
+import { getImageList, deleteFromCompressFile, deleteFileFromDirectory } from "../../services/mangaProtocolService.js";
 import { join } from "path";
 import fs from "node:fs";
 
@@ -588,7 +588,7 @@ const getChapterImageList = async (_event: IpcMainInvokeEvent, chapterId: number
       return createErrorResponse("Chapter not found");
     }
     if (chapter.mangaId === null) {
-      return createErrorResponse("Chapter not found");
+      return createErrorResponse("Manga not found");
     }
     const manga = await repo.getMangaById(chapter.mangaId);
     if (!manga) {
@@ -611,6 +611,32 @@ const getChapterImageList = async (_event: IpcMainInvokeEvent, chapterId: number
     return createSuccessResponse(result, "Chapter image list retrieved successfully");
   } catch (error) {
     return createErrorResponse(error as Error, "Failed to retrieve chapter image list");
+  }
+};
+
+const deleteFromCompressFileHandler = async (_event: IpcMainInvokeEvent, archivePath: string, filesToDelete: string[]): IpcResult<boolean> => {
+  try {
+    const result = await deleteFromCompressFile(archivePath, filesToDelete);
+    if (result) {
+      return createSuccessResponse(result, "Files deleted from compressed archive successfully");
+    } else {
+      return createErrorResponse("Failed to delete files from compressed archive");
+    }
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to delete files from compressed archive");
+  }
+};
+
+const deleteFileFromDirectoryHandler = async (_event: IpcMainInvokeEvent, chapterPath: string, fileName: string): IpcResult<boolean> => {
+  try {
+    const result = await deleteFileFromDirectory(chapterPath, fileName);
+    if (result) {
+      return createSuccessResponse(result, "File deleted from directory successfully");
+    } else {
+      return createErrorResponse("Failed to delete file from directory");
+    }
+  } catch (error) {
+    return createErrorResponse(error as Error, "Failed to delete file from directory");
   }
 };
 
@@ -667,5 +693,9 @@ export const mangaDatabaseHandlers: IpcModule = {
     { name: "manga:getAllConfig", handler: getAllConfig },
     { name: "manga:setConfig", handler: setConfig },
     { name: "manga:deleteConfig", handler: deleteConfig },
+
+    // Compressed file handlers
+    { name: "manga:deleteFromCompressFile", handler: deleteFromCompressFileHandler },
+    { name: "manga:deleteFileFromDirectory", handler: deleteFileFromDirectoryHandler },
   ],
 };

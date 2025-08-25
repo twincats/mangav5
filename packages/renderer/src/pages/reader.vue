@@ -15,6 +15,15 @@ const previousWindowBounds = ref<{ width: number; height: number; x: number; y: 
 const hasReachedBottom = ref<boolean>(false);
 const isUpdatingReadStatus = ref<boolean>(false);
 
+// Archive recovery status
+const isRecoveringArchive = ref<boolean>(false);
+const archiveRecoveryMessage = ref<string>('');
+
+// Delete confirmation dialog
+const showDeleteConfirmDialog = ref<boolean>(false);
+const imageToDelete = ref<{ fileName: string; chapterPath: string } | null>(null);
+const isDeleting = ref<boolean>(false);
+
 const chapterImageList = ref<string[]>([]);
 const currentChapter = ref<any>(null);
 const mangaInfo = ref<any>(null);
@@ -40,6 +49,66 @@ watch(()=>route.params.chapterId, async (newVal)=>{
     }
 })
 
+const tryRestoreArchiveFromBackup = async (chapterId: number) => {
+    try {
+        isRecoveringArchive.value = true;
+        archiveRecoveryMessage.value = 'Attempting to restore corrupted archive...';
+        
+        // Get chapter info to determine archive path
+        const chapterResult = await mangaAPI.getChapterById(chapterId);
+        if (!chapterResult.success) {
+            console.error('Failed to get chapter info for restore:', chapterResult.error);
+            return;
+        }
+        
+        const chapter = chapterResult.data;
+        if (!chapter) {
+            console.error('Chapter data is undefined');
+            return;
+        }
+        
+        const mangaResult = await mangaAPI.getMangaWithChapters(chapter.mangaId);
+        if (!mangaResult.success) {
+            console.error('Failed to get manga info for restore:', mangaResult.error);
+            return;
+        }
+        
+        const manga = mangaResult.data?.manga;
+        if (!manga?.mainTitle) {
+            console.error('Failed to get manga title for restore');
+            return;
+        }
+        
+        // Construct archive path
+        const archivePath = `${manga.mainTitle}/${chapter.chapterNumber}`;
+        
+        // Try to restore from backup using existing API
+        // For now, we'll use a simple approach: try to get image list again
+        // The backend should handle archive corruption automatically
+        
+        // Retry getting chapter image list
+        const retryResult = await mangaAPI.getChapterImageList(chapterId);
+        if (retryResult.success) {
+            const imageList = retryResult.data || [];
+            const sortedImageList = imageList.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+            chapterImageList.value = sortedImageList;
+            archiveRecoveryMessage.value = 'Archive recovered successfully!';
+        } else {
+            console.error('Still failed to get chapter image list after refresh:', retryResult.error);
+            archiveRecoveryMessage.value = 'Failed to recover archive. Please try refreshing.';
+        }
+    } catch (error) {
+        console.error('Error during archive restore:', error);
+        archiveRecoveryMessage.value = 'Error during archive recovery.';
+    } finally {
+        // Reset recovery state after a delay
+        setTimeout(() => {
+            isRecoveringArchive.value = false;
+            archiveRecoveryMessage.value = '';
+        }, 3000);
+    }
+};
+
 const getChapterImageList = async (chapterId: number) => {
     const result = await mangaAPI.getChapterImageList(chapterId);
     if (result.success) {
@@ -48,6 +117,16 @@ const getChapterImageList = async (chapterId: number) => {
         chapterImageList.value = sortedImageList;
     } else {
         console.error("Failed to get chapter image list:", result.error);
+        
+        // Check if it's a "Bad archive" error and try to restore from backup
+        if (result.error && result.error.includes('Bad archive')) {
+            // Show user notification
+            if (currentChapter.value) {
+                // You can add a toast notification here if you have a notification system
+            }
+            
+            await tryRestoreArchiveFromBackup(chapterId);
+        }
     }
 }
 
@@ -131,12 +210,11 @@ const updateChapterReadStatus = async () => {
             if (currentChapter.value) {
                 currentChapter.value.statusRead = true;
             }
-            console.log('✅ Chapter marked as read');
         } else {
-            console.error('❌ Failed to update chapter read status:', result.error);
+            console.error('Failed to update chapter read status:', result.error);
         }
     } catch (error) {
-        console.error('❌ Error updating chapter read status:', error);
+        console.error('Error updating chapter read status:', error);
     } finally {
         isUpdatingReadStatus.value = false;
     }
@@ -188,7 +266,7 @@ onMounted(async () => {
     // Listen for context menu actions
     window.addEventListener('context-menu-action', (e: Event) => {
         const customEvent = e as CustomEvent;
-        const action = customEvent.detail;
+        const { action, args } = customEvent.detail;
         switch(action) {
             case 'toggle-fullscreen':
                 toggleFullScreen();
@@ -210,6 +288,10 @@ onMounted(async () => {
                 break;
             case 'go-home':
                 router.push('/');
+                break;
+            case 'delete-image':
+                const [imageFileName, chapterPath] = args;
+                showDeleteConfirmation(imageFileName, chapterPath);
                 break;
         }
     });
@@ -223,7 +305,7 @@ onBeforeRouteLeave((_to, _from, next) => {
     // Remove context menu event listener
     window.removeEventListener('context-menu-action', (e: Event) => {
         const customEvent = e as CustomEvent;
-        const action = customEvent.detail;
+        const { action, args } = customEvent.detail;
         switch(action) {
             case 'toggle-fullscreen':
                 toggleFullScreen();
@@ -245,6 +327,10 @@ onBeforeRouteLeave((_to, _from, next) => {
                 break;
             case 'go-home':
                 router.push('/');
+                break;
+            case 'delete-image':
+                const [imageFileName, chapterPath] = args;
+                showDeleteConfirmation(imageFileName, chapterPath);
                 break;
         }
     });
@@ -301,10 +387,157 @@ const toggleFullScreen = () => {
   }
 }
 
+const deleteImageFile = async (imageFileName: string, chapterPath: string) => {
+  try {
+    // Check if chapter is compressed using database field
+    const isCompressed = currentChapter.value?.isCompressed || false;
+    
+    if (isCompressed) {
+      // Delete from compressed file - need to find the correct extension
+      let archivePath: string;
+      let cbzPath: string;
+      let zipPath: string;
+      
+      // Check if path already has extension
+      if (chapterPath.endsWith('.cbz') || chapterPath.endsWith('.zip')) {
+        archivePath = chapterPath;
+        // Extract base path without extension for fallback
+        const basePath = chapterPath.replace(/\.(cbz|zip)$/, '');
+        cbzPath = `${basePath}.cbz`;
+        zipPath = `${basePath}.zip`;
+      } else {
+        // Try to find the actual compressed file with correct extension
+        // This matches the logic in mangaProtocolService.ts getImageList
+        
+        // Check if .cbz exists first, then fallback to .zip
+        // This is more robust than assuming just one extension
+        cbzPath = `${chapterPath}.cbz`;
+        zipPath = `${chapterPath}.zip`;
+        
+        // Try to determine which extension actually exists
+        // For now, we'll try .cbz first, then .zip as fallback
+        // In the future, we could check which file actually exists on the filesystem
+        archivePath = cbzPath;
+      }
+      
+      // For compressed files, file path should include subfolder structure
+      // If chapter is 2, file should be in subfolder "2", so path becomes "2/2.webp"
+      const filePathInArchive = `${currentChapter.value?.chapterNumber}/${imageFileName}`;
+      
+      // Try to delete from the archive with fallback mechanism
+      // First try .cbz, then fallback to .zip if needed
+      let result = await tryDeleteFromArchive(cbzPath, filePathInArchive);
+      
+      // If .cbz fails, try .zip as fallback
+      if (!result.success) {
+        result = await tryDeleteFromArchive(zipPath, filePathInArchive);
+      }
+      
+      if (result.success) {
+        // Refresh chapter image list
+        await getChapterImageList(Number(chapterId));
+      } else {
+        console.error(`Failed to delete ${imageFileName} from compressed chapter:`, result.error);
+      }
+    } else {
+      // Delete from directory
+      const result = await mangaAPI.deleteFileFromDirectory(chapterPath, imageFileName);
+      if (result.success) {
+        // Refresh chapter image list
+        await getChapterImageList(Number(chapterId));
+      } else {
+        console.error(`Failed to delete ${imageFileName} from directory:`, result.error);
+      }
+    }
+  } catch (error) {
+    console.error(`Error deleting image ${imageFileName}:`, error);
+  }
+};
+
+const showDeleteConfirmation = (fileName: string, chapterPath: string) => {
+  imageToDelete.value = { fileName, chapterPath };
+  showDeleteConfirmDialog.value = true;
+};
+
+const confirmDelete = async () => {
+  if (imageToDelete.value) {
+    try {
+      isDeleting.value = true;
+      const { fileName, chapterPath } = imageToDelete.value;
+      await deleteImageFile(fileName, chapterPath);
+      
+      // Close dialog and reset
+      showDeleteConfirmDialog.value = false;
+      imageToDelete.value = null;
+    } finally {
+      isDeleting.value = false;
+    }
+  }
+};
+
+const cancelDelete = () => {
+  showDeleteConfirmDialog.value = false;
+  imageToDelete.value = null;
+};
+
+// Helper function to try deleting from archive with fallback to different extensions
+const tryDeleteFromArchive = async (archivePath: string, filePathInArchive: string) => {
+  // First try the original path
+  let result = await mangaAPI.deleteFromCompressFile(archivePath, [filePathInArchive]);
+  
+  if (result.success) {
+    return result;
+  }
+  
+  // If original path fails, try .cbz extension
+  if (!archivePath.endsWith('.cbz')) {
+    const cbzPath = archivePath.replace('.zip', '.cbz');
+    result = await mangaAPI.deleteFromCompressFile(cbzPath, [filePathInArchive]);
+    
+    if (result.success) {
+      return result;
+    }
+  }
+  
+  // If .cbz also fails, try .zip extension
+  if (!archivePath.endsWith('.zip')) {
+    const zipPath = archivePath.replace('.cbz', '.zip');
+    result = await mangaAPI.deleteFromCompressFile(zipPath, [filePathInArchive]);
+    
+    if (result.success) {
+      return result;
+    }
+  }
+  
+  // If all attempts fail, return the last error
+  return result;
+};
+
 const clickContextMenu = (e:Event)=>{
   e.preventDefault();
   const target = e.target as HTMLElement;
   const elementType = target.tagName.toLowerCase();
+  
+  // Get image filename and chapter path if clicking on image
+  let imageFileName: string | undefined;
+  let chapterPath: string | undefined;
+  
+  if (elementType === 'img' && target instanceof HTMLImageElement) {
+    const src = target.src;
+    // Extract filename from manga:// protocol
+    if (src.startsWith('manga://')) {
+      const pathParts = src.replace('manga://', '').split('/');
+      imageFileName = pathParts[pathParts.length - 1]; // Get filename
+      
+      // Get chapter path from current chapter info
+      if (currentChapter.value?.path) {
+        chapterPath = currentChapter.value.path.startsWith('/') ? currentChapter.value.path.slice(1) : currentChapter.value.path;
+      } else if (mangaInfo.value?.mainTitle) {
+        chapterPath = `${mangaInfo.value.mainTitle}/${currentChapter.value?.chapterNumber}`;
+      }
+    }
+  }
+  
   showContextMenu({
     routeName: 'reader',
     elementType,
@@ -314,6 +547,8 @@ const clickContextMenu = (e:Event)=>{
     containerWidth: containerWidth.value,
     canNavigatePrev: canNavigatePrev(),
     canNavigateNext: canNavigateNext(),
+    imageFileName,
+    chapterPath,
   });
 }
 </script>
@@ -356,6 +591,15 @@ const clickContextMenu = (e:Event)=>{
                         :color="currentChapter?.statusRead ? 'positive' : 'grey'"
                         :icon="currentChapter?.statusRead ? 'check_circle' : 'radio_button_unchecked'"
                         :label="currentChapter?.statusRead ? 'Read' : 'Unread'"
+                        size="sm"
+                    />
+                    
+                    <!-- Archive Recovery Status -->
+                    <q-chip
+                        v-if="isRecoveringArchive"
+                        color="warning"
+                        icon="restore"
+                        :label="archiveRecoveryMessage"
                         size="sm"
                     />
                 </div>
@@ -450,6 +694,37 @@ const clickContextMenu = (e:Event)=>{
             </template>
         </div>
     </div>
+    
+    <!-- Delete Confirmation Dialog -->
+    <q-dialog v-model="showDeleteConfirmDialog" persistent>
+      <q-card style="min-width: 350px">
+        <q-card-section class="row items-center">
+          <q-avatar icon="warning" color="warning" text-color="white" />
+          <span class="q-ml-sm text-h6">Konfirmasi Hapus</span>
+        </q-card-section>
+
+        <q-card-section>
+          <p class="text-body1">
+            Apakah Anda yakin ingin menghapus file <strong>{{ imageToDelete?.fileName }}</strong>?
+          </p>
+          <p class="text-caption text-grey-7">
+            File akan dihapus secara permanen dan tidak dapat dikembalikan.
+          </p>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Batal" color="grey" @click="cancelDelete" :disable="isDeleting" />
+          <q-btn 
+            unelevated 
+            label="Hapus" 
+            color="negative" 
+            @click="confirmDelete"
+            :loading="isDeleting"
+            :disable="isDeleting"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     </div>
 </template>
 

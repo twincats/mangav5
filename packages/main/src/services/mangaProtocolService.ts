@@ -13,6 +13,7 @@ import mime from "mime";
 import StreamZip from "node-stream-zip";
 import { app } from "electron";
 import yazl from "yazl";
+import os from "os";
 
 /** Base directory where all manga content is stored */
 const baseMangaDir = "D:/Tools/Manga";
@@ -139,6 +140,14 @@ class ZipCache {
       this.remove(path);
     }
     clearInterval(this.cleanupInterval);
+  }
+
+  /**
+   * Removes a specific ZIP file from the cache
+   * Useful for clearing cache when modifying archives
+   */
+  removeSpecific(zipPath: string) {
+    this.remove(zipPath);
   }
 
   /**
@@ -368,6 +377,257 @@ export async function compressChapterDirectory(
     return true;
   } catch (err) {
     console.error(`Error compressing chapter directory: ${chapterPath}`, err);
+    return false;
+  }
+}
+
+/**
+ * Deletes specific files from a compressed chapter archive (CBZ/ZIP)
+ * by extracting to temporary directory, removing files, and recompressing
+ *
+ * @param archivePath - Path to the compressed archive (relative to base manga directory)
+ * @param filesToDelete - Array of file paths to delete (e.g., ["1/3.webp", "1/4.webp"])
+ * @returns Promise resolving to true if successful, false otherwise
+ */
+export async function deleteFromCompressFile(
+  archivePath: string,
+  filesToDelete: string[]
+): Promise<boolean> {
+  try {
+    const fullArchivePath = path.join(baseMangaDir, archivePath);
+    
+    // Check if archive exists
+    if (!fs.existsSync(fullArchivePath)) {
+      console.error(`Archive does not exist: ${fullArchivePath}`);
+      return false;
+    }
+
+    // Clear ZIP cache for this archive to prevent conflicts
+    // This ensures the archive is not being read while we modify it
+    if (zipCache.has(fullArchivePath)) {
+      console.log(`Clearing ZIP cache for: ${fullArchivePath}`);
+      zipCache.removeSpecific(fullArchivePath);
+    }
+
+    // Check if it's a supported archive format
+    const ext = path.extname(fullArchivePath).toLowerCase();
+    if (!zipExtensions.includes(ext)) {
+      console.error(`Unsupported archive format: ${ext}`);
+      return false;
+    }
+
+    // Create temporary directory for extraction
+    const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'manga-delete-'));
+    console.log(`Created temporary directory: ${tempDir}`);
+
+    try {
+      // Extract archive to temporary directory
+      const zip = new StreamZip.async({ file: fullArchivePath });
+      await zip.extract(null, tempDir);
+      await zip.close();
+      console.log(`Extracted archive to: ${tempDir}`);
+
+      // Get list of all files in the archive
+      const allFiles = await getAllFilesRecursive(tempDir);
+      console.log(`Found ${allFiles.length} files in archive`);
+      
+      // Debug: Log all file names for troubleshooting
+      console.log('Files in archive:', allFiles.map(f => path.basename(f)));
+      
+      // Log the files that will be deleted
+      console.log('Files to delete:', filesToDelete);
+
+      // Delete specified files
+      let deletedCount = 0;
+      console.log(`Attempting to delete files:`, filesToDelete);
+      
+      for (const fileToDelete of filesToDelete) {
+        const fullFilePath = path.join(tempDir, fileToDelete);
+        console.log(`Looking for file: ${fileToDelete} at path: ${fullFilePath}`);
+        
+        if (fs.existsSync(fullFilePath)) {
+          await fs.promises.unlink(fullFilePath);
+          console.log(`✅ Successfully deleted file: ${fileToDelete}`);
+          deletedCount++;
+        } else {
+          console.warn(`❌ File not found for deletion: ${fileToDelete}`);
+          console.log(`Full path checked: ${fullFilePath}`);
+          
+          // Debug: Check if file exists with different case or similar name
+          const similarFiles = allFiles.filter(f => 
+            path.basename(f).toLowerCase().includes(fileToDelete.toLowerCase()) ||
+            fileToDelete.toLowerCase().includes(path.basename(f).toLowerCase())
+          );
+          if (similarFiles.length > 0) {
+            console.log(`Similar files found:`, similarFiles.map(f => path.basename(f)));
+          }
+          
+          // Debug: Check if file exists in subfolders
+          const fileInSubfolder = allFiles.find(f => 
+            f.endsWith(fileToDelete) || 
+            f.endsWith(path.basename(fileToDelete))
+          );
+          if (fileInSubfolder) {
+            console.log(`File found in subfolder: ${fileInSubfolder}`);
+          }
+        }
+      }
+
+      if (deletedCount === 0) {
+        console.warn(`No files were deleted from the archive`);
+        return false;
+      }
+
+      console.log(`Deleted ${deletedCount} files from archive`);
+
+      // Create new archive with remaining files
+      const newZipFile = new yazl.ZipFile();
+      
+      // Add remaining files to new archive
+      // Filter out files that were deleted and only include existing files
+      const existingFiles = allFiles.filter(file => {
+        const relativePath = path.relative(tempDir, file);
+        // Only include files that weren't deleted AND still exist on filesystem
+        return !filesToDelete.includes(relativePath) && fs.existsSync(file);
+      });
+
+      console.log(`Adding ${existingFiles.length} existing files to new archive`);
+      console.log(`Original files: ${allFiles.length}, Files to delete: ${filesToDelete.length}, Remaining: ${existingFiles.length}`);
+
+      for (const file of existingFiles) {
+        try {
+          const relativePath = path.relative(tempDir, file);
+          newZipFile.addFile(file, relativePath);
+          console.log(`Added to archive: ${relativePath}`);
+        } catch (fileError) {
+          console.warn(`Error adding file ${file} to archive:`, fileError);
+          // Continue with other files
+        }
+      }
+
+      // Finalize the new ZIP file
+      newZipFile.end();
+
+      // Create backup of original archive
+      const backupPath = fullArchivePath + '.backup';
+      await fs.promises.copyFile(fullArchivePath, backupPath);
+      console.log(`Created backup: ${backupPath}`);
+
+      // Replace original archive with new one
+      const outputStream = fs.createWriteStream(fullArchivePath);
+      
+      await new Promise<void>((resolve, reject) => {
+        newZipFile.outputStream.pipe(outputStream);
+        outputStream.on("close", resolve);
+        outputStream.on("error", reject);
+      });
+
+      console.log(`Successfully updated archive: ${fullArchivePath}`);
+
+      // Remove backup file
+      await fs.promises.unlink(backupPath);
+      console.log(`Removed backup file`);
+
+      // Force refresh of ZIP cache to ensure new archive is read correctly
+      console.log(`Archive updated successfully, cache will refresh on next read`);
+
+      return true;
+
+    } finally {
+      // Clean up temporary directory
+      try {
+        await fs.promises.rm(tempDir, { recursive: true, force: true });
+        console.log(`Cleaned up temporary directory: ${tempDir}`);
+      } catch (cleanupErr) {
+        console.warn(`Failed to clean up temporary directory: ${tempDir}`, cleanupErr);
+      }
+
+      // Ensure ZIP cache is cleared for this archive to prevent conflicts
+      if (zipCache.has(fullArchivePath)) {
+        console.log(`Final cache cleanup for: ${fullArchivePath}`);
+        zipCache.removeSpecific(fullArchivePath);
+      }
+    }
+
+  } catch (err) {
+    console.error(`Error deleting files from compressed archive: ${archivePath}`, err);
+    
+    // Clear cache on error to prevent stale references
+    const fullArchivePath = path.join(baseMangaDir, archivePath);
+    if (zipCache.has(fullArchivePath)) {
+      console.log(`Clearing ZIP cache due to error: ${fullArchivePath}`);
+      zipCache.removeSpecific(fullArchivePath);
+    }
+    
+    return false;
+  }
+}
+
+/**
+ * Helper function to get all files recursively from a directory
+ * 
+ * @param dirPath - Directory path to scan
+ * @returns Array of full file paths
+ */
+async function getAllFilesRecursive(dirPath: string): Promise<string[]> {
+  const files: string[] = [];
+  
+  try {
+    const items = await fs.promises.readdir(dirPath, { withFileTypes: true });
+    
+    for (const item of items) {
+      const fullPath = path.join(dirPath, item.name);
+      
+      if (item.isDirectory()) {
+        const subFiles = await getAllFilesRecursive(fullPath);
+        files.push(...subFiles);
+      } else if (item.isFile()) {
+        files.push(fullPath);
+      }
+    }
+  } catch (err) {
+    console.error(`Error reading directory: ${dirPath}`, err);
+  }
+  
+  return files;
+}
+
+/**
+ * Deletes a specific file from a manga chapter directory
+ * 
+ * @param chapterPath - Path to the chapter directory (relative to base manga directory)
+ * @param fileName - Name of the file to delete
+ * @returns Promise resolving to true if successful, false otherwise
+ */
+export async function deleteFileFromDirectory(
+  chapterPath: string,
+  fileName: string
+): Promise<boolean> {
+  try {
+    const fullChapterPath = path.join(baseMangaDir, chapterPath);
+    
+    // Check if directory exists
+    if (!fs.existsSync(fullChapterPath) || !fs.statSync(fullChapterPath).isDirectory()) {
+      console.error(`Chapter directory does not exist: ${fullChapterPath}`);
+      return false;
+    }
+
+    // Find the file in the directory (including subdirectories)
+    const allFiles = await getAllFilesRecursive(fullChapterPath);
+    const targetFile = allFiles.find(file => path.basename(file) === fileName);
+    
+    if (!targetFile) {
+      console.error(`File ${fileName} not found in chapter directory: ${fullChapterPath}`);
+      return false;
+    }
+
+    // Delete the file
+    await fs.promises.unlink(targetFile);
+    console.log(`Successfully deleted file: ${fileName} from ${fullChapterPath}`);
+    
+    return true;
+  } catch (err) {
+    console.error(`Error deleting file ${fileName} from directory: ${chapterPath}`, err);
     return false;
   }
 }

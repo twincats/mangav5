@@ -406,4 +406,22 @@ export const mangaAPI = {
     [() => validateId(chapterId, "chapter")],
     () => createIpcCall<string[]>("manga:getChapterImageList", chapterId)
   ),
+
+  // Compressed file operations
+  deleteFromCompressFile: (archivePath: string, filesToDelete: string[]) => withValidation(
+    [
+      () => validateString(archivePath, "Archive path"),
+      () => validateArray(filesToDelete, "Files to delete", 100)
+    ],
+    () => createIpcCall<boolean>("manga:deleteFromCompressFile", archivePath.trim(), filesToDelete)
+  ),
+
+  // Directory file operations
+  deleteFileFromDirectory: (chapterPath: string, fileName: string) => withValidation(
+    [
+      () => validateString(chapterPath, "Chapter path"),
+      () => validateString(fileName, "File name")
+    ],
+    () => createIpcCall<boolean>("manga:deleteFileFromDirectory", chapterPath.trim(), fileName.trim())
+  ),
 };

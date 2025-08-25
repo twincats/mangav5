@@ -10,6 +10,8 @@ interface ContextMenuContext {
     containerWidth?: string;
     canNavigatePrev?: boolean;
     canNavigateNext?: boolean;
+    imageFileName?: string;
+    chapterPath?: string;
 }
 
 export function showContextMenu(context: ContextMenuContext) {
@@ -17,7 +19,7 @@ export function showContextMenu(context: ContextMenuContext) {
 }
 
 // Listen for context menu actions
-ipcRenderer.on('execute-context-action', (_event, action: string) => {
+ipcRenderer.on('execute-context-action', (_event, action: string, ...args: any[]) => {
     // Emit custom event that renderer can listen to
-    window.dispatchEvent(new CustomEvent('context-menu-action', { detail: action }));
+    window.dispatchEvent(new CustomEvent('context-menu-action', { detail: { action, args } }));
 });
