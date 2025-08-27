@@ -12,6 +12,8 @@ interface ContextMenuContext {
     canNavigateNext?: boolean;
     imageFileName?: string;
     chapterPath?: string;
+    mangaId?: number;
+    mangaTitle?: string;
 }
 
 export function showContextMenu(context: ContextMenuContext) {

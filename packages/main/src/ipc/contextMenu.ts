@@ -2,15 +2,15 @@ import { ipcMain, Menu } from "electron";
 import type {MenuItemConstructorOptions} from "electron"
 
 export function registerContextMenu() {
-    ipcMain.on('context-menu', (event, context: { routeName: string, elementType: string, selectionText?: string, readingMode?: string, readingDirection?: string, isFullscreen?: boolean, containerWidth?: string, canNavigatePrev?: boolean, canNavigateNext?: boolean, imageFileName?: string, chapterPath?: string}) => {
-        const { routeName, elementType, selectionText, readingMode, readingDirection, isFullscreen, containerWidth, canNavigatePrev, canNavigateNext, imageFileName, chapterPath } = context;
+    ipcMain.on('context-menu', (event, context: { routeName: string, elementType: string, selectionText?: string, readingMode?: string, readingDirection?: string, isFullscreen?: boolean, containerWidth?: string, canNavigatePrev?: boolean, canNavigateNext?: boolean, imageFileName?: string, chapterPath?: string, mangaId?: number, mangaTitle?: string}) => {
+        const { routeName, elementType, selectionText, readingMode, readingDirection, isFullscreen, containerWidth, canNavigatePrev, canNavigateNext, imageFileName, chapterPath, mangaId, mangaTitle } = context;
         // Base menu items for all routes
         const baseMenuItems: MenuItemConstructorOptions[] = [];
 
         switch(routeName){
             case 'home':
                 baseMenuItems.push(
-                    { label: 'Add Alternative Title'},
+                    { label: 'Add Alternative Title', click: () => event.sender.send('execute-context-action', 'add-alternative-title', { mangaId, mangaTitle })},
                     { type: 'separator' },
                     { label: 'Convert Chapter Webp'},
                     { label: 'Compress Manga Chapter'},
