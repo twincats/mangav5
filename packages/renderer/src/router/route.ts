@@ -19,6 +19,16 @@ const router = createRouter({
       component: () => import("../pages/reader.vue"),
     },
     {
+      path: "/convert-and-compress",
+      name: "convert-and-compress",
+      component: () => import("../pages/convertAndCompress.vue"),
+    },
+    {
+      path: "/download",
+      name: "download",
+      component: () => import("../pages/download.vue"),
+    },
+    {
       path: "/about",
       name: "about",
       // route level code-splitting

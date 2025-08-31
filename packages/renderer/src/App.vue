@@ -5,7 +5,8 @@
         <q-toolbar class="bg-black text-white" style="height: 30px">
           <q-btn flat round dense icon="home" to="/" />
           <q-btn flat round dense icon="book" @click="alert" />
-          <q-btn flat round dense icon="download" to="/manga-example" />
+          <q-btn flat round dense icon="download" to="/download"/>
+          <q-btn flat round dense icon="folder_zip" to="/convert-and-compress"/>
           <q-btn to="/feature">ds</q-btn>
           <q-btn flat round dense icon="info" to="/about"></q-btn>
         </q-toolbar>
